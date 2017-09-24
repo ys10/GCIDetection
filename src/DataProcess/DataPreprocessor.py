@@ -1,45 +1,61 @@
 import h5py
 import wave
 import numpy
-import pylab as pl
-import math
+import os
 
-# 打开wav文件
-# open返回一个的是一个Wave_read类的实例，通过调用它的方法读取WAV文件的格式和数据
-f = wave.open(r"C:\wamp64\www\mos_tool\audio\1.wav", "rb")
 
-# 读取格式信息
-# 一次性返回所有的WAV文件的格式信息，它返回的是一个组元(tuple)：声道数, 量化位数（byte单位）, 采
-# 样频率, 采样点数, 压缩类型, 压缩类型的描述。wave模块只支持非压缩的数据，因此可以忽略最后两个信息
-params = f.getparams()
-nchannels, sampwidth, framerate, nframes = params[:4]
-print("nchannels: " + str(nchannels))
-print("sampwidth: " + str(sampwidth))
-print("framerate: " + str(framerate))
-print("nframes: " + str(nframes))
+waveDirPath = "C:/Users/Silver/Documents/GitRepo/GCIDetection/data/wav/"
+markDirPath = "../../data/mark/"
+hdf5DirPath = "../../data/hdf5/"
 
-# 读取波形数据
-# 读取声音数据，传递一个参数指定需要读取的长度（以取样点为单位）
-str_data = f.readframes(nframes)
-f.close()
+waveExtension = ".wav"
+markExtension = ".mark"
+hdf5Extension = ".hdf5"
 
-# 将波形数据转换成数组
-# 需要根据声道数和量化单位，将读取的二进制数据转换为一个可以计算的数组
-wave_data = numpy.fromstring(str_data, dtype=numpy.short)
-wave_data.shape = -1, 2
-wave_data = wave_data.T
-time = numpy.arange(0, nframes) * (1.0 / framerate)
-len_time = math.floor(len(time) / 2)
-time = time[0:len_time]
+hdf5Filename = "APLAWDW_s_01_a"
 
-##print "time length = ",len(time)
-##print "wave_data[0] length = ",len(wave_data[0])
+# Get all file names
+items = os.listdir(markDirPath)
+filenameList = []
+for names in items:
+    if names.endswith(markExtension):
+        filenameList.append(names.split(".")[0])
+print(filenameList)
 
-# 绘制波形
+# Prepare an hdf5 file to save the process result
+h5File = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension, 'w')
 
-pl.subplot(211)
-pl.plot(time, wave_data[0])
-pl.subplot(212)
-pl.plot(time, wave_data[1], c="r")
-pl.xlabel("time")
-pl.show()
+# Iterate all files
+for fileName in filenameList:
+    print("file name:" + str(fileName))
+    # Read wave params & data
+    waveFile = wave.open(waveDirPath + fileName + waveExtension, "rb")
+    params = waveFile.getparams()
+    nchannels, sampwidth, framerate, nframes = params[:4]
+    print("nchannels: " + str(nchannels))
+    print("sampwidth: " + str(sampwidth))
+    print("framerate: " + str(framerate))
+    print("nframes: " + str(nframes))
+    strData = waveFile.readframes(nframes)
+    waveData = numpy.fromstring(strData, dtype=numpy.short)
+    # write wave date into hdf5 file.
+    h5File[fileName + "/input"] = waveData
+    waveFile.close()
+    #
+    markFile = open(markDirPath + fileName + markExtension)
+    # Initialize mark data with all zero list whose length equals to wave data
+    markData = numpy.zeros(shape = (framerate * nframes,), dtype=numpy.short)
+    while 1:
+        lines = markFile.readlines(100000)
+        if not lines:
+            break
+        for line in lines:
+            time = int(float(line) * framerate)
+            # print(line)
+            markData[time] = 1
+            pass
+    # write mark date into hdf5 file.
+    h5File[fileName + "/label"] = markData
+    markFile.close()
+    pass
+h5File.close()
