@@ -37,13 +37,16 @@ for fileName in filenameList:
     print("framerate: " + str(framerate))
     print("nframes: " + str(nframes))
     strData = waveFile.readframes(nframes)
-    waveData = numpy.fromstring(strData, dtype=numpy.short)
+    waveData = numpy.fromstring(strData, dtype=numpy.double)
+    waveData = (waveData + 32768.0) / 65536.0
+    print(waveData)
     # write wave date into hdf5 file.
     h5File[fileName + "/input"] = waveData
     waveFile.close()
     #
     markFile = open(markDirPath + fileName + markExtension)
     # Initialize mark data with all zero list whose length equals to wave data
+    print("##################" + str(strData.__len__()))
     markData = numpy.zeros(shape = (strData.__len__(),), dtype=numpy.bool)
     while 1:
         lines = markFile.readlines(100000)
