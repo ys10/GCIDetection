@@ -4,7 +4,7 @@ import numpy
 import os
 
 
-waveDirPath = "C:/Users/Silver/Documents/GitRepo/GCIDetection/data/wav/"
+waveDirPath = "../../data/wav/"
 markDirPath = "../../data/mark/"
 hdf5DirPath = "../../data/hdf5/"
 
@@ -44,7 +44,7 @@ for fileName in filenameList:
     #
     markFile = open(markDirPath + fileName + markExtension)
     # Initialize mark data with all zero list whose length equals to wave data
-    markData = numpy.zeros(shape = (framerate * nframes,), dtype=numpy.short)
+    markData = numpy.zeros(shape = (strData.__len__(),), dtype=numpy.bool)
     while 1:
         lines = markFile.readlines(100000)
         if not lines:
