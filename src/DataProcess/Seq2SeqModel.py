@@ -4,13 +4,13 @@ import logging
 import tensorflow as tf
 import h5py
 from tensorflow.contrib import rnn
-from src.DataProcess import Dataset
+from Dataset import Data
 
 # 设置 GPU 按需增长
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 
-hdf5DirPath = "../../data/hdf5/"
+hdf5DirPath = "data/hdf5/"
 hdf5Filename = "APLAWDW_s_01_a"
 hdf5Extension = ".hdf5"
 
@@ -101,7 +101,7 @@ with tf.variable_scope("LSTM") as vs:
         logging.debug("Session started!")
         sess.run(tf.global_variables_initializer())
 
-        dataSet = Dataset.Data(dataFile, batchSize, timestepSize)
+        dataSet = Data(dataFile, batchSize, timestepSize)
         for i in range(50):
             # _batch_size = 4
             [batchX, batchY] = dataSet.getBatch(i)

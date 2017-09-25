@@ -4,9 +4,9 @@ import numpy
 import os
 
 
-waveDirPath = "../../data/wav/"
-markDirPath = "../../data/mark/"
-hdf5DirPath = "../../data/hdf5/"
+waveDirPath = "data/wav/"
+markDirPath = "data/mark/"
+hdf5DirPath = "data/hdf5/"
 
 waveExtension = ".wav"
 markExtension = ".mark"

@@ -1,6 +1,6 @@
 import numpy
 import math
-from src.DataProcess.utils import *
+from utils import pad_sequences
 
 class Data(object):
 
