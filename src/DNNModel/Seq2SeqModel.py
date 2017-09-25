@@ -1,11 +1,15 @@
 from __future__ import print_function
 
-import configparser
 import logging
 import tensorflow as tf
 import h5py
-from math import ceil
 from tensorflow.contrib import rnn
+from src.DataProcess import Dataset
+
+# 设置 GPU 按需增长
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
 
 hdf5DirPath = "../../data/hdf5/"
 hdf5Filename = "APLAWDW_s_01_a"
@@ -13,155 +17,79 @@ hdf5Extension = ".hdf5"
 
 dataFile = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension)
 
-# Parameters
-learning_rate = 0.001
-batch_size = 16
-display_batch = 1
-training_iters = 1
-# For dropout to prevent over-fitting.
-# Neural network will not work with a probability of 1-keep_prob.
-keep_prob = 1.0
-# Step of truncated back propagation.
-truncated_step = 0
+# 学习率
+lr = 1e-3
+# 在训练和测试的时候，我们想用不同的 batch_size.所以采用占位符的方式
+# batchSize = tf.placeholder(tf.int32)  # 注意类型必须为 tf.int32
+batchSize = 16
+# batch_size = 128
 
-# Network Parameters
-n_input = 1 # data input
-n_steps = 33600 # time steps
-n_hidden = 384 # hidden layer num of features
-n_layers = 2 # num of hidden layers
-n_classes = 1 # total classes
+# 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
+inputSize = 1
+# 时序持续长度为40000，即每做一次预测，需要先输入40000行
+timestepSize = 40000
+# 每个隐含层的节点数
+hiddenSize = 256
+# LSTM layer 的层数
+layerNum = 1
+# 最后输出分类类别数量，如果是回归预测的话应该是 1
+classNum = 2
 
-# tf Graph input
-x = tf.placeholder(tf.double, [batch_size, n_steps, n_input])
-y = tf.placeholder(tf.bool, [batch_size, n_steps - truncated_step, n_classes])
+X = tf.placeholder(tf.double, [None, inputSize * timestepSize])
+y = tf.placeholder(tf.bool, [None, classNum])
+keep_prob = tf.placeholder(tf.double)
 
-# Define parameters of full connection between the second LSTM layer and output layer.
-# Define weights.
-weights = {
-    'out': tf.Variable(tf.random_normal([batch_size, n_hidden, n_classes]))
-}
-# Define biases.
-biases = {
-    'out': tf.Variable(tf.random_normal([n_steps - truncated_step, n_classes]))
-}
+# 把784个点的字符信息还原成 28 * 28 的图片
+# 下面几个步骤是实现 RNN / LSTM 的关键
+####################################################################
+# **步骤1：RNN 的输入shape = (batch_size, timestep_size, input_size)
+X = tf.reshape(X, [-1, timestepSize, inputSize])
 
-# Define LSTM as a RNN.
-def RNN(x, weights, biases, truncated_step):
+# **步骤2：定义一层 LSTM_cell，只需要说明 hidden_size, 它会自动匹配输入的 X 的维度
+lstmCell = rnn.BasicLSTMCell(num_units=hiddenSize, forget_bias=1.0, state_is_tuple=True)
 
-    # Prepare data shape to match `rnn` function requirements
-    # Current data input shape: (batch_size, n_steps, n_input)
-    # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
+# **步骤3：添加 dropout layer, 一般只设置 output_keep_prob
+lstmCell = rnn.DropoutWrapper(cell=lstmCell, input_keep_prob=1.0, output_keep_prob=keep_prob)
 
-    # Permuting batch_size and n_steps
-    x = tf.transpose(x, [1, 0, 2])
-    # Reshaping to (n_steps*batch_size, n_input)
-    x = tf.reshape(x, [-1, n_input])
-    # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    x = tf.split(x, n_steps, 0)
+# **步骤4：调用 MultiRNNCell 来实现多层 LSTM
+mlstmCell = rnn.MultiRNNCell([lstmCell] * layerNum, state_is_tuple=True)
 
-    # Define a lstm cell with tensorflow
-    lstm_cell = rnn.BasicLSTMCell(n_hidden, forget_bias=1.0)
-    # Drop out in case of over-fitting.
-    lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
-    # Stack two same lstm cell
-    cell = rnn.MultiRNNCell([lstm_cell] * n_layers)
+# **步骤5：用全零来初始化state
+initState = mlstmCell.zero_state(batchSize, dtype=tf.double)
 
-    # Initialize the states of LSTM.
-    # cell.zero_state(batch_size, dtype = tf.double)
-    # states = tf.zeros([batch_size, n_hidden * n_layers])
-    states = cell.zero_state(batch_size, dtype=tf.double)
-    # BPTT
-    # for i in range(truncated_step):
-    #     outputs, states = cell(x[i][:][:], states)
+# **步骤6：按时间步展开计算
+outputs = list()
+state = initState
+with tf.variable_scope('RNN'):
+    for timestep in range(timestepSize):
+        if timestep > 0:
+            tf.get_variable_scope().reuse_variables()
+        # 这里的state保存了每一层 LSTM 的状态
+        (cell_output, state) = mlstmCell(X[:, timestep], state)
+        outputs.append(cell_output)
+h_state = outputs[-1]
 
-    # _, states = rnn.static_rnn(cell, x[:truncated_step][:],
-    #                            initial_state= states, dtype=tf.double)
+# 开始训练和测试
+W = tf.Variable(tf.truncated_normal([hiddenSize, classNum], stddev=0.1), dtype=tf.double)
+bias = tf.Variable(tf.constant(0.1,shape=[classNum]), dtype=tf.double)
+y_pre = tf.nn.softmax(tf.matmul(h_state, W) + bias)
 
-    # Get lstm cell outputs with shape (n_steps, batch_size, n_input).
 
-    # tf.get_variable_scope().reuse_variables()
-    outputs, states = rnn.static_rnn(cell, x[truncated_step:][:],
-                                     initial_state= states, dtype=tf.double)
-    # Permuting batch_size and n_steps.
-    outputs = tf.transpose(outputs, [1, 0, 2])
-    # Now, shape of outputs is (batch_size, n_steps, n_input)
-    # Linear activation, using rnn inner loop last output
-    # The first dim of outputs & weights must be same.
-    return tf.matmul(outputs, weights['out']) + biases['out']
+# 损失和评估函数
+cross_entropy = -tf.reduce_mean(y * tf.log(y_pre))
+train_op = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
 
-# Define prediction of RNN(LSTM).
-pred = RNN(x, weights, biases, truncated_step)
+correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(y,1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, "double"))
 
-# Define loss and optimizer.
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+sess.run(tf.global_variables_initializer())
 
-# Evaluate
-correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.double))
-
-# Configure session
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-# Launch the graph
-with tf.Session(config=config) as sess:
-    # Initializing the variables
-    init = tf.global_variables_initializer()
-    sess.run(init)
-    # Keep training until reach max iterations
-    for iter in range(0, training_iters, 1):
-        # For each iteration.
-        # Read all trunk names.
-        all_trunk_names = dataFile.keys();
-        logging.info("all_trunk_names:"+ all_trunk_names)
-        # Break out of the training iteration while there is no trunk usable.
-        if not all_trunk_names:
-            break
-        # Calculate how many batches can the data set be divided into.
-        n_batches = ceil(len(all_trunk_names)/batch_size)
-        # Train the RNN(LSTM) model by batch.
-        for batch in range(0, n_batches, 1):
-            # For each batch.
-            # Define two variables to store input data.
-            batch_x = []
-            batch_y = []
-            # Traverse all trunks of a batch.
-            for trunk in range(0, batch_size, 1):
-                # For each trunk in the batch.
-                # Calculate the index of current trunk in the whole data set.
-                trunk_name_index = n_batches * batch_size + trunk
-                # There is a fact that if the number of all trunks
-                #   can not be divisible by batch size,
-                #   then the last batch can not get enough trunks of batch size.
-                # The above fact is equivalent to the fact
-                #   that there is at least a trunk
-                #   whose index is no less than the number of all trunks.
-                if(trunk_name_index >= len(all_trunk_names)):
-                    # So some used trunks should be add to the last batch when the "fact" happened.
-                    # Select the last trunk to be added into the last batch.
-                    trunk_name_index = len(all_trunk_names)-1
-                # Get trunk name from all trunk names by trunk name index.
-                trunk_name = all_trunk_names[trunk_name_index]
-                # Get trunk data by trunk name without line break character.
-                # trunk_x is a tensor of shape (n_steps, n_inputs)
-                trunk_x = dataFile[trunk_name + '/input']
-                # trunk_y is a tensor of shape (n_steps - truncated_step, n_classes)
-                trunk_y = dataFile[trunk_name + '/label'][truncated_step:]
-                # Add current trunk into the batch.
-                batch_x.append(trunk_x)
-                batch_y.append(trunk_y)
-            # batch_x is a tensor of shape (batch_size, n_steps, n_inputs)
-            # batch_y is a tensor of shape (batch_size, n_steps - truncated_step, n_inputs)
-            # Run optimization operation (Back-propagation Through Time)
-            sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
-            # Print accuracy by display_batch.
-            if (batch * batch_size) % display_batch == 0:
-                # Calculate batch accuracy.
-                acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
-                # Calculate batch loss.
-                loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
-                logging.debug("Iter:" + str(iter) + ",Batch:"+ str(batch)
-                      + ", Batch Loss= {:.6f}".format(loss)
-                      + ", Training Accuracy= {:.5f}".format(acc))
-            break
-    logging.info("Optimization Finished!")
+dataSet = Dataset.Data(dataFile, batchSize, timestepSize)
+for i in range(50):
+    # _batch_size = 4
+    [batchX, batchY] = dataSet.getBatch(i)
+    if (i+1)% 5 == 0:
+        train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+        # 已经迭代完成的 epoch 数: mnist.train.epochs_completed
+        logging.info("Epoch:%d,\t iteration:%d,\t training accuracy:%g" % ( dataSet.completedEpoch, (i+1), train_accuracy))
+    sess.run(train_op, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
