@@ -1,4 +1,4 @@
-import h5py
+import numpy
 import math
 from src.DataProcess.utils import *
 
@@ -8,7 +8,7 @@ class Data(object):
         self.dataFile = dataFile
         self.batchSize = batchSize
         self.timeStep = timeStep
-        self.keyList = dataFile.keys()
+        self.keyList = list(dataFile.keys())
         self.batchCount = math.ceil( self.keyList.__len__() /  float(self.batchSize))
         self.completedEpoch = 0
         pass
@@ -35,6 +35,7 @@ class Data(object):
                 batchY.append(sentenceY)
                 pass
             batchX = pad_sequences(batchX, maxlen=self.timeStep)
+            # batchX = numpy.fromstring(batchX, dtype=numpy.float32)
             batchY = pad_sequences(batchY, maxlen=self.timeStep)
-            return {'batchX' : batchX, 'batchY' : batchY}
+            return [batchX, batchY]
 pass
