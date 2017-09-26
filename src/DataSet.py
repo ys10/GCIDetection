@@ -2,12 +2,12 @@ import numpy
 import math
 from utils import pad_sequences
 
-class Data(object):
+class DataSet(object):
 
-    def __init__(self, dataFile, batchSize, timeStep):
+    def __init__(self, dataFile, batchSize, maxTimeStep):
         self.dataFile = dataFile
         self.batchSize = batchSize
-        self.timeStep = timeStep
+        self.maxTimeStep = maxTimeStep
         self.keyList = list(dataFile.keys())
         self.batchCount = math.ceil( self.keyList.__len__() /  float(self.batchSize))
         self.completedEpoch = 0
@@ -34,8 +34,8 @@ class Data(object):
                 batchX.append(sentenceX)
                 batchY.append(sentenceY)
                 pass
-            batchX = pad_sequences(batchX, maxlen=self.timeStep)
+            batchX, _ = pad_sequences(batchX, maxlen=self.maxTimeStep)
             # batchX = numpy.fromstring(batchX, dtype=numpy.float32)
-            batchY = pad_sequences(batchY, maxlen=self.timeStep)
-            return [batchX, batchY]
+            batchY, _ = pad_sequences(batchY, maxlen=self.maxTimeStep)
+            return (batchX, batchY)
 pass

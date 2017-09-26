@@ -4,11 +4,12 @@ import logging
 import tensorflow as tf
 import h5py
 from tensorflow.contrib import rnn
-from Dataset import Data
+from DataSet import DataSet
 
 # 设置 GPU 按需增长
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
+config.gpu_options.per_process_gpu_memory_fraction = 0.6
 
 hdf5DirPath = "data/hdf5/"
 hdf5Filename = "APLAWDW_s_01_a"
@@ -64,15 +65,16 @@ with tf.variable_scope("LSTM") as vs:
         # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
 
         # Permuting batch_size and n_steps
-        x = tf.transpose(x, [1, 0, 2])
+        # x = tf.transpose(x, [1, 0, 2])
         # Reshaping to (n_steps*batch_size, n_input)
-        x = tf.reshape(x, [-1, inputSize])
+        # x = tf.reshape(x, [-1, inputSize])
         # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-        x = tf.split(x, timestepSize, 0)
-        outputs, _ = rnn.static_rnn(stack, x, dtype=tf.float32)
-        outputs = tf.reshape(outputs, [-1, hiddenSize])
-        logits = tf.matmul(outputs, weights['out']) + biases['out']
-        logits = tf.reshape(logits, [batchSize, -1, classNum])
+        # x = tf.split(x, timestepSize, 0)
+        outputs, _ = tf.nn.dynamic_rnn(stack, x, dtype=tf.float32)
+        # outputs = tf.reshape(outputs, [-1, hiddenSize])
+        # logits = tf.matmul(outputs, weights['out']) + biases['out']
+        # logits = tf.reshape(logits, [batchSize, -1, classNum])
+        logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
         # Time major
         # logits = tf.transpose(logits, (1, 0, 2))
         return logits
@@ -81,8 +83,8 @@ with tf.variable_scope("LSTM") as vs:
     pred = RNN(X, weights, biases)
 #
 
-    loss = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
-    cost = tf.reduce_mean(loss)
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
+    cost = tf.reduce_mean(cross_entropy)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
@@ -97,18 +99,21 @@ with tf.variable_scope("LSTM") as vs:
     # correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(y,1))
     # accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float32"))
 
-    with tf.Session(config=config) as sess:
-        logging.debug("Session started!")
+    with tf.Session() as sess:
+    # with tf.Session(config=config) as sess:
+        print("Session started!")
         sess.run(tf.global_variables_initializer())
 
         dataSet = Data(dataFile, batchSize, timestepSize)
         for i in range(50):
+            print("Iteration: "+i)
             # _batch_size = 4
-            [batchX, batchY] = dataSet.getBatch(i)
+            (batchX, batchY) = dataSet.getBatch(i)
             if (i+1)% 5 == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
                 # 已经迭代完成的 epoch 数: mnist.train.epochs_completed
                 logging.info("Epoch:%d,\t iteration:%d,\t training accuracy:%g" % ( dataSet.completedEpoch, (i+1), train_accuracy))
+                pass
             sess.run(train_op, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
             pass
         pass
