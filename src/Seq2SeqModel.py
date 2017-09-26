@@ -104,9 +104,9 @@ with tf.variable_scope("LSTM") as vs:
         print("Session started!")
         sess.run(tf.global_variables_initializer())
 
-        dataSet = Data(dataFile, batchSize, timestepSize)
+        dataSet = DataSet(dataFile, batchSize, timestepSize)
         for i in range(50):
-            print("Iteration: "+i)
+            print("Iteration: "+ str(i))
             # _batch_size = 4
             (batchX, batchY) = dataSet.getBatch(i)
             if (i+1)% 5 == 0:
