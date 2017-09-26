@@ -40,7 +40,7 @@ dataFile = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension)
 learningRate = 1e-3
 # 在训练和测试的时候，我们想用不同的 batch_size.所以采用占位符的方式
 # batchSize = tf.placeholder(tf.int32)  # 注意类型必须为 tf.int32
-batchSize = 16
+batchSize = 4 # During an iteration, each batch need memory space around 1Gb.
 
 # 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
 inputSize = 1
