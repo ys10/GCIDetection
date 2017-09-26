@@ -17,25 +17,21 @@ class DataSet(object):
         return self.batchCount
 
     def getBatch(self, batchIndex):
-        if batchIndex >= self.batchCount:
-            return []
-        else:
-            batchX = []
-            batchY = []
-            startKeyIndex = batchIndex * self.batchSize
-            endKeyIndex = (batchIndex+ 1) * self.batchSize
-            for i in range(startKeyIndex, endKeyIndex, 1) :
-                j = i % self.keyList.__len__()
-                if i == self.keyList.__len__():
-                    self.completedEpoch += 1
-                    pass
-                sentenceX = self.dataFile[self.keyList[j] + "/input"]
-                sentenceY = self.dataFile[self.keyList[j] + "/label"]
-                batchX.append(sentenceX)
-                batchY.append(sentenceY)
+        batchX = []
+        batchY = []
+        startKeyIndex = batchIndex * self.batchSize
+        endKeyIndex = (batchIndex+ 1) * self.batchSize
+        for i in range(startKeyIndex, endKeyIndex, 1) :
+            j = i % self.keyList.__len__()
+            if j == 0:
+                self.completedEpoch += 1
                 pass
-            batchX, _ = pad_sequences(batchX, maxlen=self.maxTimeStep)
-            # batchX = numpy.fromstring(batchX, dtype=numpy.float32)
-            batchY, _ = pad_sequences(batchY, maxlen=self.maxTimeStep)
-            return (batchX, batchY)
+            sentenceX = self.dataFile[self.keyList[j] + "/input"]
+            sentenceY = self.dataFile[self.keyList[j] + "/label"]
+            batchX.append(sentenceX)
+            batchY.append(sentenceY)
+            pass
+        batchX, _ = pad_sequences(batchX, maxlen=self.maxTimeStep)
+        batchY, _ = pad_sequences(batchY, maxlen=self.maxTimeStep)
+        return (batchX, batchY)
 pass

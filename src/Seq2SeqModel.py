@@ -27,7 +27,7 @@ logging.getLogger('').addHandler(console)
 
 # 设置 GPU 按需增长
 config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
+# config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.6
 
 hdf5DirPath = "data/hdf5/"
