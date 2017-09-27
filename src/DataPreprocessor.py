@@ -46,7 +46,7 @@ for fileName in filenameList:
     # read mark data
     markFile = open(markDirPath + fileName + markExtension)
     # Initialize mark data with all zero list whose length equals to wave data
-    lengthenTime = 0.01*framerate
+    lengthenTime = int(0.01*framerate)
     zero = numpy.zeros(shape = (nframes + lengthenTime, 1), dtype=numpy.float32)
     # one = numpy.ones(shape = (strData.__len__(), 1), dtype=numpy.float32)
     # markData = numpy.reshape([zero, one], [strData.__len__(), 2])
