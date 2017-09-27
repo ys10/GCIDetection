@@ -92,12 +92,18 @@ with tf.variable_scope("LSTM") as vs:
         dataSet = DataSet(dataFile, batchSize, timestepSize)
         for i in range(iteration):
             (batchX, batchY) = dataSet.getBatch(i)
-            _, traningCost = sess.run([train_op, cost], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-            logging.info("Iteration:%d,\t training cost:%g" % (i, traningCost))
+            _, trainingCost = sess.run([train_op, cost], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+            logging.info("Iteration:" + str(i)
+                         + ", \tbatch loss= {:.6f}".format(trainingCost))
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-                logging.info("Epoch:%d,\t iteration:%d,\t training accuracy:%g" % ( dataSet.completedEpoch, (i+1), train_accuracy))
+                logging.info("Epoch:%d" + str(dataSet.completedEpoch)
+                             + ", \tteration:" + str(i)
+                             + ", \tbatch loss= {:.6f}".format(trainingCost)
+                             + ", \t training accuracy= {:.6f}".format(train_accuracy))
                 pass
             pass
+        logging.info("Optimization Finished!")
         pass
+    pass
