@@ -62,39 +62,26 @@ y = tf.placeholder(tf.float32, [batchSize, timestepSize, classNum])
 keep_prob = tf.placeholder(tf.float32)
 
 with tf.variable_scope("LSTM") as vs:
-    # Define parameters of full connection between the second LSTM layer and output layer.
-    # Define weights.
-    weights = {
-        'out': tf.Variable(tf.random_normal([hiddenSize, classNum]))
-    }
-    # Define biases.
-    biases = {
-        'out': tf.Variable(tf.random_normal([classNum]))
-    }
-
-    # Define a lstm cell with tensorflow
-    lstm_cell = rnn.BasicLSTMCell(hiddenSize, forget_bias=1.0)
-    # Drop out in case of over-fitting.
-    lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
-    # Stack two same lstm cell
-    stack = rnn.MultiRNNCell([lstm_cell] * layerNum)
-
-    # Define LSTM as a RNN.
-    def RNN(x, weights, biases):
-        outputs, _ = tf.nn.dynamic_rnn(stack, x, dtype=tf.float32)
-        logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
-        return logits
-
-    # Define prediction of RNN(LSTM).
-    pred = RNN(X, weights, biases)
+    cells = list()
+    for _ in range (layerNum):
+        # Define a lstm cell with tensorflow
+        lstm_cell = rnn.BasicLSTMCell(hiddenSize, forget_bias=1.0)
+        # Drop out in case of over-fitting.
+        lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob)
+        # Stack same lstm cell
+        cells.append(lstm_cell)
+        pass
+    stack = rnn.MultiRNNCell(cells)
+    outputs, _ = tf.nn.dynamic_rnn(stack, X, dtype=tf.float32)
+    logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
 
     # Loss function
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
     cost = tf.reduce_mean(cross_entropy)
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
     # Evaluate
-    correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+    correct_pred = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     '''Start a session and run up.'''
