@@ -92,11 +92,12 @@ with tf.variable_scope("LSTM") as vs:
         dataSet = DataSet(dataFile, batchSize, timestepSize)
         for i in range(iteration):
             (batchX, batchY) = dataSet.getBatch(i)
-            _, trainingCost = sess.run([train_op, cost], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+            _, trainingCost, modelOutput = sess.run([train_op, cost, logits], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
             logging.info("Iteration:" + str(i)
                          + ", \tbatch loss= {:.6f}".format(trainingCost))
-            logging.debug("batchX:"+ str(batchX))
-            logging.debug("batchY:"+ str(batchY))
+            logging.debug("batchX:"+ str(batchX[0]))
+            logging.debug("batchY:"+ str(batchY[0]))
+            logging.debug("modelOutput:"+ str(modelOutput[0]))
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
