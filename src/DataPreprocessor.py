@@ -46,10 +46,11 @@ for fileName in filenameList:
     # read mark data
     markFile = open(markDirPath + fileName + markExtension)
     # Initialize mark data with all zero list whose length equals to wave data
-    zero = numpy.zeros(shape = (nframes + 1, 1), dtype=numpy.float32)
+    lengthenTime = 0.01*framerate
+    zero = numpy.zeros(shape = (nframes + lengthenTime, 1), dtype=numpy.float32)
     # one = numpy.ones(shape = (strData.__len__(), 1), dtype=numpy.float32)
     # markData = numpy.reshape([zero, one], [strData.__len__(), 2])
-    markData = numpy.reshape(zero, [nframes + 1, 1])
+    markData = numpy.reshape(zero, [nframes + lengthenTime, 1])
     print("\tmark data shape:\t"+str(markData.shape))
     # waveData = (waveData + 32768.0) / 65536.0
     # print(markData)
@@ -59,8 +60,6 @@ for fileName in filenameList:
             break
         for line in lines:
             time = int(float(line) * framerate)
-            # print(line)
-            # print(time)
             markData[time][0] = 1.0
             # markData[time][1] = 0.0
             pass
