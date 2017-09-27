@@ -51,7 +51,7 @@ for fileName in filenameList:
     lengthenTime = int(0.01*framerate)
     zero = numpy.zeros(shape = (nframes + lengthenTime, 1), dtype=numpy.float32)
     one = numpy.ones(shape = (nframes + lengthenTime, 1), dtype=numpy.float32)
-    markData = numpy.reshape([zero, one], [nframes + lengthenTime, 2])
+    markData = numpy.reshape(numpy.asarray([zero, one]).transpose(), [nframes + lengthenTime, 2])
     # markData = numpy.reshape(zero, [nframes + lengthenTime, 1])
     print("\tmark data shape:\t"+str(markData.shape))
     # waveData = (waveData + 32768.0) / 65536.0
