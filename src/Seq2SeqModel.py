@@ -54,7 +54,7 @@ hiddenSize = 256
 # LSTM layer 的层数
 layerNum = 1
 # 最后输出分类类别数量，如果是回归预测的话应该是 1
-classNum = 1
+classNum = 2
 
 '''DNN model'''
 X = tf.placeholder(tf.float32, [batchSize, timestepSize, inputSize])
@@ -98,8 +98,8 @@ with tf.variable_scope("LSTM") as vs:
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-                logging.info("Epoch:%d" + str(dataSet.completedEpoch)
-                             + ", \tteration:" + str(i)
+                logging.info("Epoch:" + str(dataSet.completedEpoch)
+                             + ", \titeration:" + str(i)
                              + ", \tbatch loss= {:.6f}".format(trainingCost)
                              + ", \t training accuracy= {:.6f}".format(train_accuracy))
                 pass
