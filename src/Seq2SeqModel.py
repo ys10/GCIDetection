@@ -40,7 +40,7 @@ dataFile = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension)
 learningRate = 1e-3
 batchSize = 8 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
-iteration = 500
+iteration = 50
 #  After a fixed count of iteration, display some info(eg. accuracy) about training.
 displayIteration = 5
 
@@ -95,6 +95,8 @@ with tf.variable_scope("LSTM") as vs:
             _, trainingCost = sess.run([train_op, cost], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
             logging.info("Iteration:" + str(i)
                          + ", \tbatch loss= {:.6f}".format(trainingCost))
+            logging.debug("batchX:"+ str(batchX))
+            logging.debug("batchY:"+ str(batchY))
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
