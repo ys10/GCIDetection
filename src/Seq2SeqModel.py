@@ -46,7 +46,7 @@ iteration = 500
 # 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
 inputSize = 1
 # 时序持续长度为40000，即每做一次预测，需要先输入40000行
-timestepSize = 40000
+timestepSize = 20480
 # 每个隐含层的节点数
 hiddenSize = 256
 # LSTM layer 的层数
