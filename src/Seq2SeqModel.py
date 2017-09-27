@@ -27,8 +27,7 @@ logging.getLogger('').addHandler(console)
 
 # 设置 GPU 按需增长
 config = tf.ConfigProto()
-# config.gpu_options.allow_growth = True
-config.gpu_options.per_process_gpu_memory_fraction = 0.6
+config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 hdf5DirPath = "data/hdf5/"
 hdf5Filename = "APLAWDW_s_01_a"
@@ -40,7 +39,9 @@ dataFile = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension)
 learningRate = 1e-3
 # 在训练和测试的时候，我们想用不同的 batch_size.所以采用占位符的方式
 # batchSize = tf.placeholder(tf.int32)  # 注意类型必须为 tf.int32
-batchSize = 4 # During an iteration, each batch need memory space around 1Gb.
+batchSize = 8 # During an iteration, each batch need memory space around 1Gb.
+#  training iteration
+iteration = 500
 
 # 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
 inputSize = 1
@@ -51,7 +52,7 @@ hiddenSize = 256
 # LSTM layer 的层数
 layerNum = 1
 # 最后输出分类类别数量，如果是回归预测的话应该是 1
-classNum = 2
+classNum = 1
 
 X = tf.placeholder(tf.float32, [batchSize, timestepSize, inputSize])
 y = tf.placeholder(tf.float32, [batchSize, timestepSize, classNum])
@@ -78,59 +79,33 @@ with tf.variable_scope("LSTM") as vs:
 
     # Define LSTM as a RNN.
     def RNN(x, weights, biases):
-
-        # Prepare data shape to match `rnn` function requirements
-        # Current data input shape: (batch_size, n_steps, n_input)
-        # Required shape: 'n_steps' tensors list of shape (batch_size, n_input)
-
-        # Permuting batch_size and n_steps
-        # x = tf.transpose(x, [1, 0, 2])
-        # Reshaping to (n_steps*batch_size, n_input)
-        # x = tf.reshape(x, [-1, inputSize])
-        # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-        # x = tf.split(x, timestepSize, 0)
         outputs, _ = tf.nn.dynamic_rnn(stack, x, dtype=tf.float32)
-        # outputs = tf.reshape(outputs, [-1, hiddenSize])
-        # logits = tf.matmul(outputs, weights['out']) + biases['out']
-        # logits = tf.reshape(logits, [batchSize, -1, classNum])
         logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
-        # Time major
-        # logits = tf.transpose(logits, (1, 0, 2))
         return logits
 
     # Define prediction of RNN(LSTM).
     pred = RNN(X, weights, biases)
-#
 
+    # Loss function
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
     cost = tf.reduce_mean(cross_entropy)
-    # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
-    # # Evaluate
+    # Evaluate
     correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    #
-    # # 损失和评估函数
-    # cross_entropy = -tf.reduce_mean(y * tf.log(y_pre))
-    # train_op = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
-    #
-    # correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(y,1))
-    # accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float32"))
 
-    with tf.Session() as sess:
-    # with tf.Session(config=config) as sess:
+    with tf.Session(config=config) as sess:
         logging.info("Session started!")
         sess.run(tf.global_variables_initializer())
-
+        # Prepare data set.
         dataSet = DataSet(dataFile, batchSize, timestepSize)
-        for i in range(50):
+        for i in range(iteration):
             logging.info("Iteration: "+ str(i))
-            # _batch_size = 4
             (batchX, batchY) = dataSet.getBatch(i)
             if (i+1)% 5 == 0:
                 train_accuracy = sess.run(accuracy, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-                # 已经迭代完成的 epoch 数: mnist.train.epochs_completed
+                # 已经迭代完成的 epoch 数
                 logging.info("Epoch:%d,\t iteration:%d,\t training accuracy:%g" % ( dataSet.completedEpoch, (i+1), train_accuracy))
                 pass
             sess.run(train_op, feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
