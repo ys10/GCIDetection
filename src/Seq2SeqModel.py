@@ -76,7 +76,8 @@ with tf.variable_scope("LSTM") as vs:
     logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
 
     # Loss function
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
+    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
+    cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y, logits=logits, pos_weight=1000)
     cost = tf.reduce_mean(cross_entropy)
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
