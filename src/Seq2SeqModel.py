@@ -81,7 +81,7 @@ with tf.variable_scope("LSTM") as vs:
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
     # Evaluate
-    correct_pred = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
+    correct_pred = tf.equal(tf.argmax(logits, 2), tf.argmax(y, 2))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     '''Start a session and run up.'''
