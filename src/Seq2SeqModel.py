@@ -100,15 +100,15 @@ with tf.variable_scope("LSTM") as vs:
             logging.debug("modelOutput:"+ str(modelOutput[0]))
             # Display accuracy.
             if (i+1)% displayIteration == 0:
-                train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+                train_logits, train_y, train_correct_pred, train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
                 logging.info("Epoch:" + str(dataSet.completedEpoch)
                              + ", \titeration:" + str(i)
                              + ", \tbatch loss= {:.6f}".format(trainingCost)
                              + ", \t training accuracy= {:.6f}".format(train_accuracy)
                              )
-                logging.debug("Logits:" + str(logits)
-                              + ", \ty:"+str(y)
-                              + ", \tcorrect_pred:" + str(correct_pred)
+                logging.debug("Logits:" + str(train_logits)
+                              + ", \ty:"+str(train_y)
+                              + ", \tcorrect_pred:" + str(train_correct_pred)
                               )
                 pass
             pass
