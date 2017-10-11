@@ -45,9 +45,9 @@ resultFile = h5py.File(hdf5DirPath + resultFilename + hdf5Extension, "w")
 learningRate = 1e-3
 batchSize = 8 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
-iteration = 50
+iteration = 50000
 #  After a fixed count of iteration, save output result of training.
-saveIteration = 1;
+saveIteration = 1000;
 #  After a fixed count of iteration, display some info(eg. accuracy) about training.
 displayIteration = 5
 
@@ -55,7 +55,7 @@ displayIteration = 5
 # 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
 inputSize = 1
 # 时序持续长度为40000，即每做一次预测，需要先输入40000行
-timestepSize = 20480
+timestepSize = 84000
 # 每个隐含层的节点数
 hiddenSize = 256
 # LSTM layer 的层数
@@ -80,13 +80,6 @@ with tf.variable_scope("LSTM") as vs:
         pass
     stack = rnn.MultiRNNCell(cells)
 
-'''Model save'''
-# Initialize the saver to save session.
-lstm_variables = [v for v in tf.global_variables() if v.name.startswith(vs.name)]
-saver = tf.train.Saver(lstm_variables, max_to_keep=50)
-saved_model_path = 'model/'
-to_save_model_path = 'model/'
-
 outputs, _ = tf.nn.dynamic_rnn(stack, X, dtype=tf.float32)
 logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
 
@@ -98,6 +91,12 @@ train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 # Evaluate
 correct_pred = tf.equal(tf.argmax(logits, 2), tf.argmax(y, 2))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+'''Model save'''
+# Initialize the saver to save session.
+saver = tf.train.Saver(write_version=tf.train.SaverDef.V1, max_to_keep=50)
+saved_model_path = 'model/'
+to_save_model_path = 'model/'
 
 '''Start a session and run up.'''
 with tf.Session(config=config) as sess:
