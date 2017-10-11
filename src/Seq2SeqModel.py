@@ -6,7 +6,8 @@ import os
 import tensorflow as tf
 import h5py
 from tensorflow.contrib import rnn
-from DataSet import DataSet
+from InputReader import InputReader
+from ResultWriter import ResultWriter
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
@@ -32,15 +33,21 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 
 ''' HDF5 file (data) info.'''
 hdf5DirPath = "data/hdf5/"
-hdf5Filename = "APLAWDW_s_01_a"
 hdf5Extension = ".hdf5"
-dataFile = h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension)
+# Data file.
+dataFilename = "APLAWDW_s_01_a"
+dataFile = h5py.File(hdf5DirPath + dataFilename + hdf5Extension)
+# Result file.
+resultFilename = "APLAWDW_s_01_a_result"
+resultFile = h5py.File(hdf5DirPath + resultFilename + hdf5Extension, "w")
 
 '''Learning model parameters'''
 learningRate = 1e-3
 batchSize = 8 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
 iteration = 50
+#  After a fixed count of iteration, save output result of training.
+saveIteration = 1;
 #  After a fixed count of iteration, display some info(eg. accuracy) about training.
 displayIteration = 5
 
@@ -89,7 +96,9 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Session started!")
         sess.run(tf.global_variables_initializer())
         # Prepare data set.
-        dataSet = DataSet(dataFile, batchSize, timestepSize)
+        dataSet = InputReader(dataFile, batchSize, timestepSize)
+        # Prepare result writer.
+        resultWriter = ResultWriter(resultFile)
         for i in range(iteration):
             (batchX, batchY) = dataSet.getBatch(i)
             _, trainingCost, modelOutput = sess.run([train_op, cost, logits], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
@@ -98,6 +107,11 @@ with tf.variable_scope("LSTM") as vs:
             logging.debug("batchX:"+ str(batchX[0]))
             logging.debug("batchY:"+ str(batchY[0]))
             logging.debug("modelOutput:"+ str(modelOutput[0]))
+            # Save output result.
+            if (i)% saveIteration == 0:
+                resultWriter.saveBatchResult(modelOutput, dataSet.getBatchKeyList(i))
+                # TODO
+                pass
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_logits, train_y, train_correct_pred, train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
@@ -115,3 +129,5 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Optimization Finished!")
         pass
     pass
+dataFile.close()
+resultFile.close()
