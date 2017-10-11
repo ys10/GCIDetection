@@ -79,55 +79,65 @@ with tf.variable_scope("LSTM") as vs:
         cells.append(lstm_cell)
         pass
     stack = rnn.MultiRNNCell(cells)
-    outputs, _ = tf.nn.dynamic_rnn(stack, X, dtype=tf.float32)
-    logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
 
-    # Loss function
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
-    cost = tf.reduce_mean(cross_entropy)
-    train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
+'''Model save'''
+# Initialize the saver to save session.
+lstm_variables = [v for v in tf.global_variables() if v.name.startswith(vs.name)]
+saver = tf.train.Saver(lstm_variables, max_to_keep=50)
+saved_model_path = 'model/'
+to_save_model_path = 'model/'
 
-    # Evaluate
-    correct_pred = tf.equal(tf.argmax(logits, 2), tf.argmax(y, 2))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+outputs, _ = tf.nn.dynamic_rnn(stack, X, dtype=tf.float32)
+logits = tf.contrib.layers.fully_connected(outputs, classNum, activation_fn=None)
 
-    '''Start a session and run up.'''
-    with tf.Session(config=config) as sess:
-        logging.info("Session started!")
-        sess.run(tf.global_variables_initializer())
-        # Prepare data set.
-        dataSet = InputReader(dataFile, batchSize, timestepSize)
-        # Prepare result writer.
-        resultWriter = ResultWriter(resultFile)
-        for i in range(iteration):
-            (batchX, batchY) = dataSet.getBatch(i)
-            _, trainingCost, modelOutput = sess.run([train_op, cost, logits], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-            logging.info("Iteration:" + str(i)
-                         + ", \tbatch loss= {:.6f}".format(trainingCost))
-            logging.debug("batchX:"+ str(batchX[0]))
-            logging.debug("batchY:"+ str(batchY[0]))
-            logging.debug("modelOutput:"+ str(modelOutput[0]))
-            # Save output result.
-            if (i)% saveIteration == 0:
-                resultWriter.saveBatchResult(modelOutput, dataSet.getBatchKeyList(i))
-                # TODO
-                pass
-            # Display accuracy.
-            if (i+1)% displayIteration == 0:
-                train_logits, train_y, train_correct_pred, train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-                logging.info("Epoch:" + str(dataSet.completedEpoch)
-                             + ", \titeration:" + str(i)
-                             + ", \tbatch loss= {:.6f}".format(trainingCost)
-                             + ", \t training accuracy= {:.6f}".format(train_accuracy)
-                             )
-                logging.debug("Logits:" + str(train_logits)
-                              + ", \ty:"+str(train_y)
-                              + ", \tcorrect_pred:" + str(train_correct_pred)
-                              )
-                pass
+# Loss function
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
+cost = tf.reduce_mean(cross_entropy)
+train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
+
+# Evaluate
+correct_pred = tf.equal(tf.argmax(logits, 2), tf.argmax(y, 2))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+'''Start a session and run up.'''
+with tf.Session(config=config) as sess:
+    logging.info("Session started!")
+    sess.run(tf.global_variables_initializer())
+    # Prepare data set.
+    dataSet = InputReader(dataFile, batchSize, timestepSize)
+    # Prepare result writer.
+    resultWriter = ResultWriter(resultFile)
+    for i in range(iteration):
+        (batchX, batchY) = dataSet.getBatch(i)
+        _, trainingCost, modelOutput = sess.run([train_op, cost, logits], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+        logging.info("Iteration:" + str(i)
+                     + ", \tbatch loss= {:.6f}".format(trainingCost))
+        logging.debug("batchX:"+ str(batchX[0]))
+        logging.debug("batchY:"+ str(batchY[0]))
+        logging.debug("modelOutput:"+ str(modelOutput[0]))
+        # Save output result.
+        if (i)% saveIteration == 0:
+            # resultWriter.saveBatchResult(modelOutput, dataSet.getBatchKeyList(i))
+            saver.save(sess, to_save_model_path, global_step=epoch);
+            logging.info("Model saved successfully to: " + to_save_model_path)
+            # TODO
             pass
-        logging.info("Optimization Finished!")
+        # Display accuracy.
+        if (i+1)% displayIteration == 0:
+            train_logits, train_y, train_correct_pred, train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
+            logging.info("Epoch:" + str(dataSet.completedEpoch)
+                         + ", \titeration:" + str(i)
+                         + ", \tbatch loss= {:.6f}".format(trainingCost)
+                         + ", \t training accuracy= {:.6f}".format(train_accuracy)
+                         )
+            logging.debug("Logits:" + str(train_logits)
+                          + ", \ty:"+str(train_y)
+                          + ", \tcorrect_pred:" + str(train_correct_pred)
+                          )
+            pass
         pass
+    logging.info("Optimization Finished!")
     pass
+pass
 dataFile.close()
 resultFile.close()
