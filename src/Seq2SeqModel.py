@@ -112,7 +112,7 @@ with tf.Session(config=config) as sess:
         # Save output result.
         if (i)% saveIteration == 0:
             # resultWriter.saveBatchResult(modelOutput, dataSet.getBatchKeyList(i))
-            saver.save(sess, to_save_model_path, global_step=epoch);
+            saver.save(sess, to_save_model_path, global_step=saveIteration);
             logging.info("Model saved successfully to: " + to_save_model_path)
             # TODO
             pass
