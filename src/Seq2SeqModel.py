@@ -43,7 +43,7 @@ resultFile = h5py.File(hdf5DirPath + resultFilename + hdf5Extension, "w")
 
 '''Learning model parameters'''
 learningRate = 1e-3
-batchSize = 8 # During an iteration, each batch need memory space around 1Gb.
+batchSize = 4 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
 iteration = 50000
 #  After a fixed count of iteration, save output result of training.
