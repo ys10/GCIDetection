@@ -93,9 +93,9 @@ with tf.variable_scope("LSTM") as vs:
         logging.info("Session started!")
         sess.run(tf.global_variables_initializer())
         # Prepare data set.
-        dataSet = DataSet(dataFile, batchSize, timestepSize)
+        inputReader = InputReader(dataFile, batchSize, timestepSize)
         for i in range(iteration):
-            (batchX, batchY) = dataSet.getBatch(i)
+            (batchX, batchY) = inputReader.getBatch(i)
             _, trainingCost, modelOutput = sess.run([train_op, cost, logits], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
             logging.info("Iteration:" + str(i)
                          + ", \tbatch loss= {:.6f}".format(trainingCost))
@@ -105,7 +105,7 @@ with tf.variable_scope("LSTM") as vs:
             # Display accuracy.
             if (i+1)% displayIteration == 0:
                 train_logits, train_y, train_correct_pred, train_accuracy = sess.run([logits, y, correct_pred, accuracy], feed_dict={X:batchX, y: batchY, keep_prob: 1.0})
-                logging.info("Epoch:" + str(dataSet.completedEpoch)
+                logging.info("Epoch:" + str(inputReader.completedEpoch)
                              + ", \titeration:" + str(i)
                              + ", \tbatch loss= {:.6f}".format(trainingCost)
                              + ", \t training accuracy= {:.6f}".format(train_accuracy)
