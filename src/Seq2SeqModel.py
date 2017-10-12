@@ -35,10 +35,10 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 hdf5DirPath = "data/hdf5/"
 hdf5Extension = ".hdf5"
 # Data file.
-dataFilename = "APLAWDW_s_01_a"
+dataFilename = "APLAWDW"
 dataFile = h5py.File(hdf5DirPath + dataFilename + hdf5Extension)
 # Result file.
-resultFilename = "APLAWDW_s_01_a_result"
+resultFilename = "APLAWDW_result"
 resultFile = h5py.File(hdf5DirPath + resultFilename + hdf5Extension, "w")
 
 '''Learning model parameters'''
@@ -52,15 +52,10 @@ saveIteration = 1000;
 displayIteration = 5
 
 '''Data info'''
-# 每个时刻的输入特征是40000维的，就是每个时刻输入一行，一行有 1 个像素
 inputSize = 1
-# 时序持续长度为40000，即每做一次预测，需要先输入40000行
 timestepSize = 84000
-# 每个隐含层的节点数
 hiddenSize = 256
-# LSTM layer 的层数
 layerNum = 1
-# 最后输出分类类别数量，如果是回归预测的话应该是 1
 classNum = 2
 
 '''DNN model'''
