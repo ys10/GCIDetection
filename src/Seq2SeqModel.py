@@ -9,7 +9,6 @@ from tensorflow.contrib import rnn
 from tensorflow.python.ops import ctc_ops
 from InputReader import InputReader
 
-
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
 if not os.path.exists(log_file_name):
@@ -30,7 +29,7 @@ logging.getLogger('').addHandler(console)
 
 ''' GPU  setting'''
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.8
+config.gpu_options.per_process_gpu_memory_fraction = 0.6
 
 ''' HDF5 file (data) info.'''
 hdf5DirPath = "data/hdf5/"
@@ -80,8 +79,8 @@ with tf.variable_scope("LSTM") as vs:
     # Loss function
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
     cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y, logits=logits, pos_weight=1000)
-    cost = tf.reduce_mean(cross_entropy)
     # cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=y, inputs=logits, sequence_length=timestepSize, time_major=False))
+    cost = tf.reduce_mean(cross_entropy)
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
     # Evaluate
