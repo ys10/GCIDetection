@@ -6,7 +6,9 @@ import os
 import tensorflow as tf
 import h5py
 from tensorflow.contrib import rnn
-from DataSet import DataSet
+from tensorflow.python.ops import ctc_ops
+from InputReader import InputReader
+
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
@@ -79,6 +81,7 @@ with tf.variable_scope("LSTM") as vs:
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y)
     cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y, logits=logits, pos_weight=1000)
     cost = tf.reduce_mean(cross_entropy)
+    # cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=y, inputs=logits, sequence_length=timestepSize, time_major=False))
     train_op = tf.train.AdamOptimizer(learning_rate=learningRate).minimize(cost)
 
     # Evaluate

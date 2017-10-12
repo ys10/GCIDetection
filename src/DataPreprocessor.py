@@ -5,15 +5,15 @@ import wave
 import numpy
 import os
 
-waveDirPath = "data/wav/"
-markDirPath = "data/mark/"
+waveDirPath = "C:/Users/Silver/Desktop/APLAWDW/wav/"
+markDirPath = "C:/Users/Silver/Desktop/APLAWDW/mark/"
 hdf5DirPath = "data/hdf5/"
 
 waveExtension = ".wav"
-markExtension = ".mark"
+markExtension = ".marks"
 hdf5Extension = ".hdf5"
 
-hdf5Filename = "APLAWDW_s_01_a"
+hdf5Filename = "APLAWDW"
 
 # Get all file names
 items = os.listdir(markDirPath)
