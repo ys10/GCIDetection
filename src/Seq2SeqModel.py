@@ -46,9 +46,9 @@ resultFile = h5py.File(hdf5DirPath + resultFilename + hdf5Extension, "w")
 learningRate = 1e-3
 batchSize = 4 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
-iteration = 50000
+iteration = 10
 #  After a fixed count of iteration, save output result of training.
-saveIteration = 1000;
+saveIteration = 1;
 #  After a fixed count of iteration, display some info(eg. accuracy) about training.
 displayIteration = 5
 
@@ -114,9 +114,14 @@ with tf.Session(config=config) as sess:
         logging.debug("modelOutput:"+ str(modelOutput[0]))
         # Save output result.
         if (i)% saveIteration == 0:
-            # resultWriter.saveBatchResult(modelOutput, dataSet.getBatchKeyList(i))
+            # Save model
             saver.save(sess, to_save_model_path, global_step=saveIteration);
             logging.info("Model saved successfully to: " + to_save_model_path)
+            # Save output
+            keyList = dataSet.getBatchKeyList(i);
+            resultWriter.saveBatchResult(modelOutput, keyList)
+            logging.info("Model output saved successfully:")
+            logging.info("Keys of saved model outputs:" + str(keyList))
             # TODO
             pass
         # Display accuracy.
