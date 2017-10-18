@@ -7,7 +7,6 @@ class ResultWriter(object):
         for i in range(keyList.__len__()):
             self.resultFile[keyList[i]] = batchResult[i]
             pass
-        #TODO
         pass
 
     pass
