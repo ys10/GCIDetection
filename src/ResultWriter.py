@@ -1,7 +1,7 @@
 import numpy as np
 
-class ResultWriter(object):
 
+class ResultWriter(object):
     def __init__(self, resultFile, samplingRate):
         self.resultFile = resultFile
         self.samplingRate = samplingRate
@@ -16,9 +16,9 @@ class ResultWriter(object):
     # Transform label(binary classification) sequence to GCI locations
     def transLabelSeq2Locations(self, labelSeq, samplingRate):
         locations = list()
-        labelLocations = np.where(np.array(labelSeq)[:, 0]==1)[0].tolist()
+        labelLocations = np.where(np.array(labelSeq)[:, 0] == 1)[0].tolist()
         for labelLocation in labelLocations:
-            location = (labelLocation+1) / samplingRate
+            location = (labelLocation + 1) / samplingRate
             locations.append(location)
             pass
         return locations
