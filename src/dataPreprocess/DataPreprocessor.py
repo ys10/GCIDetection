@@ -54,8 +54,12 @@ class DataPreprocessor(object):
             dataType = numpy.int32
         return dataType
 
+    def __getFramedLength(self, dataLength):
+        length = int(ceil(dataLength/self.frameSize) * self.frameSize)
+        return length
+
     def __padWave(self, waveData, dataType):
-        length = int(ceil(waveData.__len__()/self.frameSize) * self.frameSize)
+        length = self.__getFramedLength(waveData.__len__())
         logging.debug("length after padding:" + str(length))
         paddedData = numpy.zeros(shape = (length,), dtype=dataType)
         paddedData[:waveData.__len__()] = waveData
@@ -74,8 +78,7 @@ class DataPreprocessor(object):
         return locations
 
     # Transform GCI locations to label(binary classification) sequence.
-    def __transLocations2LabelSeq(self, locations, nSamplingPoints, samplingRate):
-        labelSeqLength = ceil(nSamplingPoints / self.frameSize)
+    def __transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
         zero = numpy.zeros(shape=(labelSeqLength, 1), dtype=numpy.float32)
         one = numpy.ones(shape=(labelSeqLength, 1), dtype=numpy.float32)
         labelSeq = numpy.reshape(numpy.asarray([zero, one]).transpose(), [labelSeqLength, 2])
@@ -106,8 +109,9 @@ class DataPreprocessor(object):
                     strWaveData = waveFile.readframes(nSamplingPoints)
                     dataType = self.__getDataType(sampleWidth)
                     waveData = numpy.fromstring(strWaveData, dtype=dataType)
+                    framedLength = self.__getFramedLength(nSamplingPoints)
                     waveData = self.__padWave(waveData, dataType)
-                    waveData = numpy.reshape(waveData, (ceil(nSamplingPoints/self.frameSize), self.frameSize))
+                    waveData = numpy.reshape(waveData, (framedLength, self.frameSize))
                     logging.debug("\twave data shape:\t" + str(waveData.shape))
                     # write wave date into hdf5 file.
                     h5File[fileName + "/input"] = list(waveData.astype(numpy.float32))
@@ -115,7 +119,7 @@ class DataPreprocessor(object):
                 # Read GCI locations.
                 with open(self.markDirPath + fileName + self.markExtension) as markFile:
                     locations = self.__getLocations(markFile)
-                    labelSeq = self.__transLocations2LabelSeq(locations, nSamplingPoints, samplingRate)
+                    labelSeq = self.__transLocations2LabelSeq(locations, framedLength, samplingRate)
                     # write label date into hdf5 file.
                     h5File[fileName + "/label"] = labelSeq
                     pass  # markFile close
