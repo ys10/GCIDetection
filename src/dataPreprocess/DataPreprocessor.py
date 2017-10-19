@@ -55,11 +55,11 @@ class DataPreprocessor(object):
         return dataType
 
     def __getFramedLength(self, dataLength):
-        length = int(ceil(dataLength/self.frameSize) * self.frameSize)
+        length = int(ceil(dataLength/self.frameSize))
         return length
 
     def __padWave(self, waveData, dataType):
-        length = self.__getFramedLength(waveData.__len__())
+        length = self.__getFramedLength(waveData.__len__()) * self.frameSize
         logging.debug("length after padding:" + str(length))
         paddedData = numpy.zeros(shape = (length,), dtype=dataType)
         paddedData[:waveData.__len__()] = waveData
