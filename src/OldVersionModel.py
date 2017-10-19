@@ -48,7 +48,7 @@ batchSize = 4 # During an iteration, each batch need memory space around 1Gb.
 #  Total training iteration
 iteration = 10000
 #  After a fixed count of iteration, save output result of training.
-saveIteration = 100;
+saveIteration = 100
 #  After a fixed count of iteration, display some info(eg. accuracy) about training.
 displayIteration = 5
 
@@ -118,7 +118,7 @@ with tf.Session(config=config) as sess:
             saver.save(sess, to_save_model_path, global_step=saveIteration);
             logging.info("Model saved successfully to: " + to_save_model_path)
             # Save output
-            keyList = dataSet.getBatchKeyList(i);
+            keyList = dataSet.getBatchKeyList(i)
             resultWriter.saveBatchResult(modelOutput, keyList)
             logging.info("Model output saved successfully:")
             logging.info("Keys of saved model outputs:" + str(keyList))
