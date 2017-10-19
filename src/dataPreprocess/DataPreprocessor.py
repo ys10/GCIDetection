@@ -3,6 +3,7 @@ import wave
 import numpy
 import os
 import logging
+from math import floor
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/dataProcess.log"
@@ -59,15 +60,15 @@ class DataPreprocessor(object):
 
     # Transform GCI locations to label(binary classification) sequence.
     def __transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
-        lengthenTime = int(0.01 * samplingRate)
-        zero = numpy.zeros(shape=(labelSeqLength + lengthenTime, 1), dtype=numpy.float32)
-        one = numpy.ones(shape=(labelSeqLength + lengthenTime, 1), dtype=numpy.float32)
-        labelSeq = numpy.reshape(numpy.asarray([zero, one]).transpose(), [labelSeqLength + lengthenTime, 2])
+        zero = numpy.zeros(shape=(labelSeqLength, 1), dtype=numpy.float32)
+        one = numpy.ones(shape=(labelSeqLength, 1), dtype=numpy.float32)
+        labelSeq = numpy.reshape(numpy.asarray([zero, one]).transpose(), [labelSeqLength, 2])
         logging.debug("mark data shape:" + str(labelSeq.shape))
         for location in locations:
-            time = int(location * samplingRate)
-            labelSeq[time][0] = 1.0
-            labelSeq[time][1] = 0.0
+            labelLocation = floor(int(location * samplingRate)) - 1
+            logging.debug("Time:" + str(labelLocation))
+            labelSeq[labelLocation][0] = 1.0
+            labelSeq[labelLocation][1] = 0.0
             pass
         return labelSeq
 
@@ -113,6 +114,7 @@ def main():
     dataPreprocessor = DataPreprocessor(dataFilePath)
     dataPreprocessor.process()
     pass
+
 
 if __name__ == '__main__':
     main()
