@@ -3,12 +3,13 @@ from __future__ import print_function
 
 import logging
 import os
-import tensorflow as tf
+
 import h5py
+import tensorflow as tf
 from tensorflow.contrib import rnn
-from InputReader import InputReader
-from ResultWriter import ResultWriter
-from tensorflow.python.ops import ctc_ops
+
+from dataAccessor.InputReader import InputReader
+from dataAccessor.ResultWriter import ResultWriter
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
@@ -115,7 +116,7 @@ with tf.Session(config=config) as sess:
         # Save output result.
         if (i)% saveIteration == 0:
             # Save model
-            saver.save(sess, to_save_model_path, global_step=saveIteration);
+            saver.save(sess, to_save_model_path, global_step=saveIteration)
             logging.info("Model saved successfully to: " + to_save_model_path)
             # Save output
             keyList = dataSet.getBatchKeyList(i)

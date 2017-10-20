@@ -1,10 +1,12 @@
-import os
-import h5py
 import logging
+import os
+from abc import abstractmethod
+
+import h5py
 import tensorflow as tf
-from tensorflow.contrib import rnn
-from src.InputReader import InputReader
-from src.ResultWriter import ResultWriter
+
+from dataAccessor.InputReader import InputReader
+from dataAccessor.ResultWriter import ResultWriter
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
@@ -38,9 +40,7 @@ class DNNModel(object):
         self.y = tf.placeholder(tf.float32, [None, None, self.classNum])
         self.keep_prob = tf.placeholder(tf.float32)
         '''DNN model'''
-        self.__initDNNModel()
-        self.outputs, _ = tf.nn.dynamic_rnn(self.stack, self.x, dtype=tf.float32)
-        self.logits = tf.contrib.layers.fully_connected(self.outputs, self.classNum, activation_fn=None)
+        self.logits = self.__runDNNModel()
         '''Loss function'''
         self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
         # self.cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=self.y, inputs=self.logits, sequence_length=self.timestepSize, time_major=False))
@@ -59,17 +59,8 @@ class DNNModel(object):
         self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
         pass
 
-    def __initDNNModel(self):
-        cells = list()
-        for _ in range(self.layerNum):
-            # Define a lstm cell with tensorflow
-            lstm_cell = rnn.BasicLSTMCell(self.hiddenSize, forget_bias=1.0)
-            # Drop out in case of over-fitting.
-            lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=self.keep_prob, output_keep_prob=self.keep_prob)
-            # Stack same lstm cell
-            cells.append(lstm_cell)
-            pass
-        self.stack = rnn.MultiRNNCell(cells)
+    @abstractmethod
+    def __runDNNModel(self):
         pass
 
     def setDataFilename(self, dataFilename, resultFilename):
@@ -119,10 +110,10 @@ class DNNModel(object):
                 # Save output result.
                 if (i) % self.saveIteration == 0:
                     # Save model
-                    self.saver.save(sess, self.to_save_model_path, global_step=self.saveIteration);
+                    self.saver.save(sess, self.to_save_model_path, global_step=self.saveIteration)
                     logging.info("Model saved successfully to: " + self.to_save_model_path)
                     # Save output
-                    keyList = dataSet.getBatchKeyList(i);
+                    keyList = dataSet.getBatchKeyList(i)
                     resultWriter.saveBatchResult(modelOutput, keyList)
                     logging.info("Model output saved successfully:")
                     logging.info("Keys of saved model outputs:" + str(keyList))
@@ -174,7 +165,7 @@ class DNNModel(object):
                 (batchX, batchY) = dataSet.getBatch(i)
                 modelOutput = sess.run([self.logits], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 # Save output
-                keyList = dataSet.getBatchKeyList(i);
+                keyList = dataSet.getBatchKeyList(i)
                 resultWriter.saveBatchResult(modelOutput, keyList)
                 pass
             pass

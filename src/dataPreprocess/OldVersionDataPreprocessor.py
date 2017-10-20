@@ -1,9 +1,10 @@
-#coding=utf-8
+# coding=utf-8
 
 import h5py
 import wave
 import numpy
 import os
+
 
 def getMarkList(markFile):
     markList = list()
@@ -17,6 +18,7 @@ def getMarkList(markFile):
         pass
     return markList
 
+
 def instantSeq2SamplingPointSeq(instantList, samplingLength, samplingRate):
     lengthenTime = int(0.01 * samplingRate)
     zero = numpy.zeros(shape=(samplingLength + lengthenTime, 1), dtype=numpy.float32)
@@ -29,6 +31,7 @@ def instantSeq2SamplingPointSeq(instantList, samplingLength, samplingRate):
         markData[time][1] = 0.0
         pass
     return markData
+
 
 waveDirPath = "data/wav/"
 markDirPath = "data/mark/"
@@ -48,7 +51,7 @@ for names in items:
         filenameList.append(names.split(".")[0])
         pass
     pass
-print("All files name: "+ str(filenameList))
+print("All files name: " + str(filenameList))
 
 # Prepare an hdf5 file to save the process result
 with h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension, 'w') as h5File:
@@ -66,7 +69,7 @@ with h5py.File(hdf5DirPath + hdf5Filename + hdf5Extension, 'w') as h5File:
         strData = waveFile.readframes(nframes)
         waveData = numpy.fromstring(strData, dtype=numpy.short)
         waveData = numpy.reshape(waveData, (nframes, 1))
-        print("\twave data shape:\t"+str(waveData.shape))
+        print("\twave data shape:\t" + str(waveData.shape))
         # waveData = (waveData + 32768.0) / 65536.0
         # write wave date into hdf5 file.
         h5File[fileName + "/input"] = list(waveData.astype(numpy.float32))

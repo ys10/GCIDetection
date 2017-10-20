@@ -1,6 +1,8 @@
 import unittest
+
 import h5py
-from src.ResultWriter import *
+
+from dataAccessor.ResultWriter import *
 
 
 class TestResultWriter(unittest.TestCase):

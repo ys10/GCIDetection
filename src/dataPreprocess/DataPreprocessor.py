@@ -25,7 +25,8 @@ logging.getLogger('').addHandler(console)
 
 
 class DataPreprocessor(object):
-    def __init__(self, dataFilePath, framSize=1, waveDirPath="data/wav/", waveExtension=".wav", markDirPath="data/mark/",
+    def __init__(self, dataFilePath, framSize=1, waveDirPath="data/wav/", waveExtension=".wav",
+                 markDirPath="data/mark/",
                  markExtension=".mark"):
         self.dataFilePath = dataFilePath
         self.frameSize = framSize
@@ -48,20 +49,20 @@ class DataPreprocessor(object):
         return keyList
 
     def __getDataType(self, sampleWidth):
-        if(sampleWidth == 2):
+        if (sampleWidth == 2):
             dataType = numpy.short
         else:
             dataType = numpy.int32
         return dataType
 
     def __getFramedLength(self, dataLength):
-        length = int(ceil(dataLength/self.frameSize))
+        length = int(ceil(dataLength / self.frameSize))
         return length
 
     def __padWave(self, waveData, dataType):
         length = self.__getFramedLength(waveData.__len__()) * self.frameSize
         logging.debug("length after padding:" + str(length))
-        paddedData = numpy.zeros(shape = (length,), dtype=dataType)
+        paddedData = numpy.zeros(shape=(length,), dtype=dataType)
         paddedData[:waveData.__len__()] = waveData
         return paddedData
 

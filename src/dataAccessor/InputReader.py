@@ -1,15 +1,15 @@
-import numpy
 import math
-from utils import pad_sequences
+
+from dataAccessor.utils import pad_sequences
+
 
 class InputReader(object):
-
     def __init__(self, dataFile, batchSize, maxTimeStep):
         self.dataFile = dataFile
         self.batchSize = batchSize
         self.maxTimeStep = maxTimeStep
         self.keyList = list(dataFile.keys())
-        self.batchCount = math.ceil( self.keyList.__len__() /  float(self.batchSize))
+        self.batchCount = math.ceil(self.keyList.__len__() / float(self.batchSize))
         self.completedEpoch = 0
         pass
 
@@ -20,8 +20,8 @@ class InputReader(object):
         batchX = []
         batchY = []
         startKeyIndex = batchIndex * self.batchSize
-        endKeyIndex = (batchIndex+ 1) * self.batchSize
-        for i in range(startKeyIndex, endKeyIndex, 1) :
+        endKeyIndex = (batchIndex + 1) * self.batchSize
+        for i in range(startKeyIndex, endKeyIndex, 1):
             j = i % self.keyList.__len__()
             if j == 0:
                 self.completedEpoch += 1
@@ -37,7 +37,7 @@ class InputReader(object):
 
     def getBatchKeyList(self, batchIndex):
         startKeyIndex = batchIndex * self.batchSize
-        endKeyIndex = (batchIndex+ 1) * self.batchSize
+        endKeyIndex = (batchIndex + 1) * self.batchSize
         keyList = self.keyList[startKeyIndex:endKeyIndex]
         return keyList
 
