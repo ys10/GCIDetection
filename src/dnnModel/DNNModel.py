@@ -51,8 +51,8 @@ class DNNModel(object):
         '''Model save'''
         # Initialize the saver to save session.
         self.saver = tf.train.Saver(max_to_keep=50)
-        self.saved_model_path = 'model/'
-        self.to_save_model_path = 'model/'
+        self.modelRestorePath = 'model/'
+        self.modelSavePath = 'model/'
         ''' GPU  setting'''
         self.config = tf.ConfigProto()
         self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
@@ -69,6 +69,11 @@ class DNNModel(object):
     def setDataFilename(self, dataFilename, resultFilename):
         self.dataFilename = dataFilename
         self.resultFilename = resultFilename
+        pass
+
+    def setModelSavePath(self, modelRestorePath, modelSavePath):
+        self.modelRestorePath = modelRestorePath
+        self.modelSavePath = modelSavePath
         pass
 
     def __openDataFile(self):
@@ -113,8 +118,8 @@ class DNNModel(object):
                 # Save output result.
                 if (i) % self.saveIteration == 0:
                     # Save model
-                    self.saver.save(sess, self.to_save_model_path, global_step=self.saveIteration)
-                    logging.info("Model saved successfully to: " + self.to_save_model_path)
+                    self.saver.save(sess, self.modelRestorePath, global_step=self.saveIteration)
+                    logging.info("Model saved successfully to: " + self.modelSavePath)
                     # Save output
                     keyList = dataSet.getBatchKeyList(i)
                     resultWriter.saveBatchResult(modelOutput, keyList)
@@ -149,7 +154,7 @@ class DNNModel(object):
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
             '''Restore model.'''
-            checkPoint = tf.train.get_checkpoint_state(self.saved_model_path)
+            checkPoint = tf.train.get_checkpoint_state(self.modelRestorePath)
             if checkPoint and checkPoint.model_checkpoint_path:
                 self.saver.restore(sess, checkPoint.model_checkpoint_path)
             else:
