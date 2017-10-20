@@ -42,9 +42,8 @@ class DNNModel(object):
         '''DNN model'''
         self.logits = self.__runDNNModel()
         '''Loss function'''
-        self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
-        # self.cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=self.y, inputs=self.logits, sequence_length=self.timestepSize, time_major=False))
-        self.cost = tf.reduce_mean(self.cross_entropy)
+        self.cost = self.__lossFunction()
+        '''Optimizer'''
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
         '''Evaluate'''
         self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
@@ -61,6 +60,10 @@ class DNNModel(object):
 
     @abstractmethod
     def __runDNNModel(self):
+        pass
+
+    @abstractmethod
+    def __lossFunction(self):
         pass
 
     def setDataFilename(self, dataFilename, resultFilename):

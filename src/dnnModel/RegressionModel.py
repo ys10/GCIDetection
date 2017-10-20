@@ -1,8 +1,8 @@
-from src.dnnModel.DNNModel import *
+from dnnModel.DNNModel import *
 import tensorflow.contrib.rnn as rnn
 
 
-class BLSTMModel(DNNModel):
+class RegressionModel(DNNModel):
     def __runDNNModel(self):
         lstm_fw_cells = list()
         lstm_bw_cells = list()

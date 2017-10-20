@@ -18,4 +18,10 @@ class LSTMModel(DNNModel):
         logits = tf.contrib.layers.fully_connected(self.outputs, self.classNum, activation_fn=None)
         return logits
 
+    def __lossFunction(self):
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
+        # cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=self.y, inputs=self.logits, sequence_length=self.timestepSize, time_major=False))
+        cost = tf.reduce_mean(cross_entropy)
+        return cost
+
     pass
