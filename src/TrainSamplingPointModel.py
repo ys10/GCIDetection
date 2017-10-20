@@ -1,7 +1,7 @@
 from src.DNNModel import *
 
 
-class SamplingPointModel(object):
+class TrainSamplingPointModel(object):
     def __init__(self):
         self.model = DNNModel(inputSize=1, timeStepSize=None, hiddenSize=256, layerNum=2, classNum=2, learningRate=1e-3)
         self.dataFilename = "data/hdf5/APLAWDW_sampling.hdf5"
@@ -10,14 +10,14 @@ class SamplingPointModel(object):
 
     def run(self):
         self.model.setDataFilename(self.dataFilename, self.resultFilename)
-        self.model.train(trainIteration=200, saveIteration=100, displayIteration=5, batchSize=8)
+        self.model.train(trainIteration=2, saveIteration=1, displayIteration=1, batchSize=4, samplingRate=16000)
         pass
 
     pass
 
 
 def main():
-    samplingPointModel = SamplingPointModel()
+    samplingPointModel = TrainSamplingPointModel()
     samplingPointModel.run()
     pass
 

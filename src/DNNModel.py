@@ -6,17 +6,16 @@ from tensorflow.contrib import rnn
 from src.InputReader import InputReader
 from src.ResultWriter import ResultWriter
 
-
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
 if not os.path.exists(log_file_name):
     f = open(log_file_name, 'w')
     f.close()
-logging.basicConfig(level = logging.INFO,
-                format = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                filename=log_file_name,
-                filemode='w')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    filename=log_file_name,
+                    filemode='w')
 
 ''' Output to the console.'''
 console = logging.StreamHandler()
@@ -27,8 +26,7 @@ logging.getLogger('').addHandler(console)
 
 
 class DNNModel(object):
-
-    def __init__(self, inputSize, timeStepSize, hiddenSize, layerNum, classNum, learningRate = 1e-3):
+    def __init__(self, inputSize, timeStepSize, hiddenSize, layerNum, classNum, learningRate=1e-3):
         self.inputSize = inputSize
         self.timeStepSize = timeStepSize
         self.hiddenSize = hiddenSize
@@ -61,7 +59,6 @@ class DNNModel(object):
         self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
         pass
 
-
     def __initDNNModel(self):
         cells = list()
         for _ in range(self.layerNum):
@@ -75,26 +72,22 @@ class DNNModel(object):
         self.stack = rnn.MultiRNNCell(cells)
         pass
 
-
     def setDataFilename(self, dataFilename, resultFilename):
         self.dataFilename = dataFilename
         self.resultFilename = resultFilename
         pass
-
 
     def __openDataFile(self):
         self.dataFile = h5py.File(self.dataFilename)
         self.resultFile = h5py.File(self.resultFilename)
         pass
 
-
     def __closeDataFile(self):
         self.dataFile.close()
         self.resultFile.close()
         pass
 
-
-    def train(self, trainIteration = 10000, saveIteration = 100, displayIteration = 5, batchSize = 4):
+    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=16000):
         #  Total training iteration
         self.trainIteration = trainIteration
         #  After a fixed count of iteration, save output result of training.
@@ -103,15 +96,17 @@ class DNNModel(object):
         self.displayIteration = displayIteration
         #  Batch size
         self.batchSize = batchSize
+        #  Sampling rate
+        self.samplingRate = samplingRate
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
-            logging.info("Session started!")
+            logging.info("Training session started!")
             sess.run(tf.global_variables_initializer())
             self.__openDataFile()
             # Prepare data set.
             dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
             # Prepare result writer.
-            resultWriter = ResultWriter(self.resultFile)
+            resultWriter = ResultWriter(self.resultFile, self.samplingRate)
             for i in range(self.trainIteration):
                 (batchX, batchY) = dataSet.getBatch(i)
                 _, trainingCost, modelOutput = sess.run([self.optimizer, self.cost, self.logits],
@@ -135,7 +130,8 @@ class DNNModel(object):
                 # Display accuracy.
                 if (i + 1) % self.displayIteration == 0:
                     train_logits, train_y, train_correct_pred, train_accuracy = sess.run(
-                        [self.logits, self.y, self.correct_pred, self.accuracy], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
+                        [self.logits, self.y, self.correct_pred, self.accuracy],
+                        feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(dataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tbatch loss= {:.6f}".format(trainingCost)
@@ -149,6 +145,38 @@ class DNNModel(object):
                 pass
             self.__closeDataFile()
             logging.info("Optimization Finished!")
+            pass
+        pass
+
+    def test(self, samplingRate=16000):
+        #  Sampling rate
+        self.samplingRate = samplingRate
+        # Start a session and run up.
+        with tf.Session(config=self.config) as sess:
+            logging.info("Training session started!")
+            '''Restore model.'''
+            checkPoint = tf.train.get_checkpoint_state(self.saved_model_path)
+            if checkPoint and checkPoint.model_checkpoint_path:
+                self.saver.restore(sess, checkPoint.model_checkpoint_path)
+            else:
+                logging.info("Check point or model path is None.")
+                return
+            '''Prepare testing parameters.'''
+            self.__openDataFile()
+            # Prepare data set.
+            dataSet = InputReader(dataFile=self.dataFile, batchSize=1, maxTimeStep=self.timeStepSize)
+            # Prepare result writer.
+            resultWriter = ResultWriter(self.resultFile, self.samplingRate)
+            # Test iteration.
+            testIteration = dataSet.getBatchCount()
+            '''Forward testing data.'''
+            for i in range(testIteration):
+                (batchX, batchY) = dataSet.getBatch(i)
+                modelOutput = sess.run([self.logits], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
+                # Save output
+                keyList = dataSet.getBatchKeyList(i);
+                resultWriter.saveBatchResult(modelOutput, keyList)
+                pass
             pass
         pass
 
