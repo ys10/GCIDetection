@@ -10,7 +10,7 @@ log_file_name = "log/dataProcess.log"
 if not os.path.exists(log_file_name):
     f = open(log_file_name, 'w')
     f.close()
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename=log_file_name,
@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 ''' Output to the console.'''
 console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
+console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
