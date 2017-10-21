@@ -29,25 +29,41 @@ logging.getLogger('').addHandler(console)
 
 class DNNModel(object):
     def __init__(self, inputSize, timeStepSize, hiddenSize, layerNum, classNum, learningRate=1e-3):
-        self.inputSize = inputSize
-        self.timeStepSize = timeStepSize
-        self.hiddenSize = hiddenSize
-        self.layerNum = layerNum
-        self.classNum = classNum
-        self.learningRate = learningRate
+        with tf.name_scope('ModelParameter'):
+            self.inputSize = inputSize
+            self.timeStepSize = timeStepSize
+            self.hiddenSize = hiddenSize
+            self.layerNum = layerNum
+            self.classNum = classNum
+            self.learningRate = learningRate
+            self.__variableSummaries(self.learningRate)
+            pass
         '''Place holder'''
-        self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])
-        self.y = tf.placeholder(tf.float32, [None, None, self.classNum])
-        self.keep_prob = tf.placeholder(tf.float32)
+        with tf.name_scope('PlaceHolder'):
+            self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])
+            self.y = tf.placeholder(tf.float32, [None, None, self.classNum])
+            self.keep_prob = tf.placeholder(tf.float32)
+            pass
         '''DNN model'''
-        self.logits = self.__runDNNModel()
+        with tf.name_scope('DNNModel'):
+            self.logits = self.__runDNNModel()
+            self.__variableSummaries(self.logits)
+            pass
         '''Loss function'''
-        self.cost = self.__lossFunction()
+        with tf.name_scope('LossFunction'):
+            self.cost = self.__lossFunction()
+            self.__variableSummaries(self.cost)
+            pass
         '''Optimizer'''
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
-        '''Evaluate'''
-        self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
-        self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
+        with tf.name_scope('Optimizer'):
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
+            pass
+        '''Evaluator'''
+        with tf.name_scope('Evaluator'):
+            self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
+            self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
+            self.__variableSummaries(self.accuracy)
+            pass
         '''Model save'''
         # Initialize the saver to save session.
         self.saver = tf.train.Saver(max_to_keep=50)
@@ -76,6 +92,10 @@ class DNNModel(object):
         self.modelSavePath = modelSavePath
         pass
 
+    def setSummarySavePath(self, summarySavePath):
+        self.summarySavePath = summarySavePath
+        pass
+
     def __openDataFile(self):
         self.dataFile = h5py.File(self.dataFilename)
         self.resultFile = h5py.File(self.resultFilename)
@@ -84,6 +104,18 @@ class DNNModel(object):
     def __closeDataFile(self):
         self.dataFile.close()
         self.resultFile.close()
+        pass
+
+    def __variableSummaries(self, var):
+        with tf.name_scope('summaries'):
+            mean = tf.reduce_mean(var)
+            tf.summary.scalar('mean', mean)
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+            tf.summary.scalar('stddev', stddev)
+            tf.summary.scalar('max', tf.reduce_max(var))
+            tf.summary.scalar('min', tf.reduce_min(var))
+            tf.summary.histogram('histogram', var)
+            pass
         pass
 
     def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=16000):
@@ -101,20 +133,25 @@ class DNNModel(object):
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
             sess.run(tf.global_variables_initializer())
-            self.__openDataFile()
+            # Summary
+            merged = tf.summary.merge_all()
+            train_writer = tf.summary.FileWriter(self.summarySavePath, sess.graph)
             # Prepare data set.
+            self.__openDataFile()
             dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
             # Prepare result writer.
             resultWriter = ResultWriter(self.resultFile, self.samplingRate)
             for i in range(self.trainIteration):
                 (batchX, batchY) = dataSet.getBatch(i)
-                _, trainingCost, modelOutput = sess.run([self.optimizer, self.cost, self.logits],
+                summary, _, trainingCost, modelOutput = sess.run([merged, self.optimizer, self.cost, self.logits],
                                                         feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
                              + ", \tbatch loss= {:.6f}".format(trainingCost))
                 logging.debug("batchX:" + str(batchX[0]))
                 logging.debug("batchY:" + str(batchY[0]))
                 logging.debug("modelOutput:" + str(modelOutput[0]))
+                # Add summary.
+                train_writer.add_summary(summary, global_step=i)
                 # Save output result.
                 if (i) % self.saveIteration == 0:
                     # Save model
