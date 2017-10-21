@@ -62,7 +62,7 @@ class DNNModel(object):
         '''Model save'''
         # Initialize the saver to save session.
         self.saver = tf.train.Saver(max_to_keep=50)
-        self.modelRestorePath = 'model/'
+        self.modelRestorePath = None
         self.modelSavePath = 'model/'
         ''' GPU  setting'''
         self.config = tf.ConfigProto()
@@ -108,7 +108,7 @@ class DNNModel(object):
         self.resultFilename = resultFilename
         pass
 
-    def setModelSavePath(self, modelRestorePath, modelSavePath):
+    def setModelSavePath(self, modelRestorePath=None, modelSavePath=None):
         self.modelRestorePath = modelRestorePath
         self.modelSavePath = modelSavePath
         pass
@@ -154,6 +154,11 @@ class DNNModel(object):
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
             sess.run(tf.global_variables_initializer())
+            '''Restore model.'''
+            if self.modelRestorePath is not None:
+                self.saver.restore(sess, self.modelRestorePath)
+                logging.info("Model restored from:"+str(self.modelRestorePath))
+                pass
             # Summary
             merged = tf.summary.merge_all()
             train_writer = tf.summary.FileWriter(self.summarySavePath, sess.graph)
@@ -176,7 +181,7 @@ class DNNModel(object):
                 # Save output result.
                 if (i) % self.saveIteration == 0:
                     # Save model
-                    self.saver.save(sess, self.modelRestorePath, global_step=self.saveIteration)
+                    self.saver.save(sess, self.modelSavePath, global_step=self.saveIteration)
                     logging.info("Model saved successfully to: " + self.modelSavePath)
                     # Save output
                     keyList = dataSet.getBatchKeyList(i)
@@ -210,13 +215,13 @@ class DNNModel(object):
         self.samplingRate = samplingRate
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
-            logging.info("Training session started!")
+            logging.info("Testing session started!")
             '''Restore model.'''
-            checkPoint = tf.train.get_checkpoint_state(self.modelRestorePath)
-            if checkPoint and checkPoint.model_checkpoint_path:
-                self.saver.restore(sess, checkPoint.model_checkpoint_path)
+            if self.modelRestorePath is not None:
+                self.saver.restore(sess, self.modelRestorePath)
+                logging.info("Model restored from:"+str(self.modelRestorePath))
             else:
-                logging.info("Check point or model path is None.")
+                logging.info("Model restore failed.")
                 return
             '''Prepare testing parameters.'''
             self.__openDataFile()
@@ -235,6 +240,7 @@ class DNNModel(object):
                 resultWriter.saveBatchResult(modelOutput, keyList)
                 pass
             pass
+        logging.info("Testing finished!")
         pass
 
     pass
