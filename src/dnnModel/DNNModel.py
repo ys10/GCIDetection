@@ -139,7 +139,7 @@ class DNNModel(object):
             pass
         pass
 
-    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=16000):
+    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=20000):
         #  Total training iteration
         self.trainIteration = trainIteration
         #  After a fixed count of iteration, save output result of training.
@@ -205,7 +205,7 @@ class DNNModel(object):
             pass
         pass
 
-    def test(self, samplingRate=16000):
+    def test(self, samplingRate=20000):
         #  Sampling rate
         self.samplingRate = samplingRate
         # Start a session and run up.

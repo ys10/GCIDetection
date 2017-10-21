@@ -86,7 +86,7 @@ class DataPreprocessor(object):
         logging.debug("mark data shape:" + str(labelSeq.shape))
         for location in locations:
             labelLocation = floor(int(location * samplingRate / self.frameSize)) - 1
-            logging.debug("Time:" + str(labelLocation))
+            # logging.debug("Time:" + str(labelLocation))
             labelSeq[labelLocation][0] = 1.0
             labelSeq[labelLocation][1] = 0.0
             pass

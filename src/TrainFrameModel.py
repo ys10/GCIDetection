@@ -13,7 +13,7 @@ class TrainFrameModel(object):
     def run(self):
         self.model.setDataFilename(self.dataFilename, self.resultFilename)
         self.model.setSummarySavePath(self.summarySavePath)
-        self.model.train(trainIteration=200, saveIteration=100, displayIteration=5, batchSize=16, samplingRate=16000)
+        self.model.train(trainIteration=200, saveIteration=100, displayIteration=5, batchSize=16, samplingRate=20000)
         pass
 
     pass

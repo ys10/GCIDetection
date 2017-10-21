@@ -13,7 +13,7 @@ class TrainSamplingPointModel(object):
     def run(self):
         self.model.setDataFilename(self.dataFilename, self.resultFilename)
         self.model.setSummarySavePath(self.summarySavePath)
-        self.model.train(trainIteration=2, saveIteration=1, displayIteration=1, batchSize=4, samplingRate=16000)
+        self.model.train(trainIteration=2, saveIteration=1, displayIteration=1, batchSize=1, samplingRate=20000)
         pass
 
     pass

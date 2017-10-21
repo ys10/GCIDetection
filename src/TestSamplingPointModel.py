@@ -11,7 +11,7 @@ class TestSamplingPointModel(object):
 
     def run(self):
         self.model.setDataFilename(self.dataFilename, self.resultFilename)
-        self.model.test(samplingRate=16000)
+        self.model.test(samplingRate=20000)
         pass
 
     pass
