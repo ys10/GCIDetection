@@ -4,6 +4,7 @@ from abc import abstractmethod
 
 import h5py
 import tensorflow as tf
+import tensorflow.contrib.rnn as rnn
 
 from dataAccessor.InputReader import InputReader
 from dataAccessor.ResultWriter import ResultWriter
@@ -45,15 +46,9 @@ class DNNModel(object):
             self.keep_prob = tf.placeholder(tf.float32)
             pass
         '''DNN model'''
-        with tf.name_scope('DNNModel'):
-            self.logits = self.__runDNNModel()
-            self.__variableSummaries(self.logits)
-            pass
+        self.__DNNModel()
         '''Loss function'''
-        with tf.name_scope('LossFunction'):
-            self.cost = self.__lossFunction()
-            self.__variableSummaries(self.cost)
-            pass
+        self.__lossFunction()
         '''Optimizer'''
         with tf.name_scope('Optimizer'):
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
@@ -74,12 +69,38 @@ class DNNModel(object):
         self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
         pass
 
-    @abstractmethod
-    def __runDNNModel(self):
+    def __DNNModel(self):
+        with tf.name_scope('DNNModel'):
+            lstm_fw_cells = list()
+            lstm_bw_cells = list()
+            for _ in range(self.layerNum):
+                # Define LSTM cells with tensorflow
+                fw_cell = rnn.BasicLSTMCell(self.hiddenSize, forget_bias=1.0)
+                bw_cell = rnn.BasicLSTMCell(self.hiddenSize, forget_bias=1.0)
+                # Drop out in case of over-fitting.
+                fw_cell = rnn.DropoutWrapper(fw_cell, input_keep_prob=self.keep_prob, output_keep_prob=self.keep_prob)
+                bw_cell = rnn.DropoutWrapper(bw_cell, input_keep_prob=self.keep_prob, output_keep_prob=self.keep_prob)
+                # Stack same LSTM cells.
+                lstm_fw_cells.append(fw_cell)
+                lstm_bw_cells.append(bw_cell)
+                pass
+            outputs, _, _ = rnn.stack_bidirectional_dynamic_rnn(
+                lstm_fw_cells,
+                lstm_bw_cells,
+                self.x,
+                dtype=tf.float32
+            )
+            self.logits = tf.contrib.layers.fully_connected(outputs, self.classNum, activation_fn=None)
+            self.__variableSummaries(self.logits)
+            pass
         pass
 
-    @abstractmethod
     def __lossFunction(self):
+        with tf.name_scope('LossFunction'):
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
+            self.cost = tf.reduce_mean(cross_entropy)
+            self.__variableSummaries(self.cost)
+            pass
         pass
 
     def setDataFilename(self, dataFilename, resultFilename):

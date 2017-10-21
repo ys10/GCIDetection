@@ -2,5 +2,6 @@ data/*
 model/*
 config/*
 log/*
+summary/*
 .idea/*
 src/__pycache__/*
