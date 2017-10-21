@@ -30,8 +30,11 @@ class BLSTMModel(DNNModel):
         pass
 
     def __lossFunction(self):
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
-        cost = tf.reduce_mean(cross_entropy)
-        return cost
+        with tf.name_scope('LossFunction'):
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
+            self.cost = tf.reduce_mean(cross_entropy)
+            self.__variableSummaries(self.cost)
+            pass
+        pass
 
     pass
