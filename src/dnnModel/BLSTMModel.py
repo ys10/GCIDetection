@@ -3,7 +3,7 @@ import tensorflow.contrib.rnn as rnn
 
 
 class BLSTMModel(DNNModel):
-    def __DNNModel(self):
+    def DNNModel(self):
         with tf.name_scope('DNNModel'):
             lstm_fw_cells = list()
             lstm_bw_cells = list()
@@ -18,14 +18,14 @@ class BLSTMModel(DNNModel):
                 lstm_fw_cells.append(fw_cell)
                 lstm_bw_cells.append(bw_cell)
                 pass
-            outputs, _, _ = rnn.stack_bidirectional_dynamic_rnn(
+            self.outputs, _, _ = rnn.stack_bidirectional_dynamic_rnn(
                 lstm_fw_cells,
                 lstm_bw_cells,
                 self.x,
                 dtype=tf.float32
             )
-            self.logits = tf.contrib.layers.fully_connected(outputs, self.classNum, activation_fn=None)
-            self.__variableSummaries(self.logits)
+            self.logits = tf.contrib.layers.fully_connected(self.outputs, self.classNum, activation_fn=None)
+            self.variableSummaries(self.logits)
             pass
         pass
 
@@ -33,7 +33,7 @@ class BLSTMModel(DNNModel):
         with tf.name_scope('LossFunction'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
             self.cost = tf.reduce_mean(cross_entropy)
-            self.__variableSummaries(self.cost)
+            self.variableSummaries(self.cost)
             pass
         pass
 

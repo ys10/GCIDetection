@@ -36,7 +36,7 @@ class DataPreprocessor(object):
         self.markExtension = markExtension
         pass
 
-    def __getKeyList(self):
+    def getKeyList(self):
         # Get all mark file names as keys.
         items = os.listdir(self.markDirPath)
         keyList = []
@@ -48,25 +48,25 @@ class DataPreprocessor(object):
         logging.debug("All files name: " + str(keyList))
         return keyList
 
-    def __getDataType(self, sampleWidth):
+    def getDataType(self, sampleWidth):
         if (sampleWidth == 2):
             dataType = numpy.short
         else:
             dataType = numpy.int32
         return dataType
 
-    def __getFramedLength(self, dataLength):
+    def getFramedLength(self, dataLength):
         length = int(ceil(dataLength / self.frameSize))
         return length
 
-    def __padWave(self, waveData, dataType):
-        length = self.__getFramedLength(waveData.__len__()) * self.frameSize
+    def padWave(self, waveData, dataType):
+        length = self.getFramedLength(waveData.__len__()) * self.frameSize
         logging.debug("length after padding:" + str(length))
         paddedData = numpy.zeros(shape=(length,), dtype=dataType)
         paddedData[:waveData.__len__()] = waveData
         return paddedData
 
-    def __getLocations(self, markFile):
+    def getLocations(self, markFile):
         locations = list()
         while 1:
             lines = markFile.readlines(100000)
@@ -79,7 +79,7 @@ class DataPreprocessor(object):
         return locations
 
     # Transform GCI locations to label(binary classification) sequence.
-    def __transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
+    def transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
         zero = numpy.zeros(shape=(labelSeqLength, 1), dtype=numpy.float32)
         one = numpy.ones(shape=(labelSeqLength, 1), dtype=numpy.float32)
         labelSeq = numpy.reshape(numpy.asarray([zero, one]).transpose(), [labelSeqLength, 2])
@@ -95,7 +95,7 @@ class DataPreprocessor(object):
     def process(self):
         # Prepare an hdf5 file to save the process result
         with h5py.File(self.dataFilePath, 'w') as h5File:
-            keyList = self.__getKeyList()
+            keyList = self.getKeyList()
             # Iterate all files
             for fileName in keyList:
                 logging.debug("File name:\t" + str(fileName))
@@ -108,10 +108,10 @@ class DataPreprocessor(object):
                     logging.debug("\tsamplingRate:\t" + str(samplingRate))
                     logging.debug("\tnSamplingPoints:\t" + str(nSamplingPoints))
                     strWaveData = waveFile.readframes(nSamplingPoints)
-                    dataType = self.__getDataType(sampleWidth)
+                    dataType = self.getDataType(sampleWidth)
                     waveData = numpy.fromstring(strWaveData, dtype=dataType)
-                    framedLength = self.__getFramedLength(nSamplingPoints)
-                    waveData = self.__padWave(waveData, dataType)
+                    framedLength = self.getFramedLength(nSamplingPoints)
+                    waveData = self.padWave(waveData, dataType)
                     waveData = numpy.reshape(waveData, (framedLength, self.frameSize))
                     logging.debug("\twave data shape:\t" + str(waveData.shape))
                     # write wave date into hdf5 file.
@@ -119,8 +119,8 @@ class DataPreprocessor(object):
                     pass  # waveFile close
                 # Read GCI locations.
                 with open(self.markDirPath + fileName + self.markExtension) as markFile:
-                    locations = self.__getLocations(markFile)
-                    labelSeq = self.__transLocations2LabelSeq(locations, framedLength, samplingRate)
+                    locations = self.getLocations(markFile)
+                    labelSeq = self.transLocations2LabelSeq(locations, framedLength, samplingRate)
                     # write label date into hdf5 file.
                     h5File[fileName + "/label"] = labelSeq
                     pass  # markFile close

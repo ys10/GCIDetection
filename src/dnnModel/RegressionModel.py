@@ -24,8 +24,8 @@ class RegressionModel(DNNModel):
                 self.x,
                 dtype=tf.float32
             )
-            self.logits = tf.contrib.layers.fully_connected(outputs, self.classNum, activation_fn=None)
-            self.__variableSummaries(self.logits)
+            self.logits = tf.contrib.layers.fully_connected(self.outputs, self.classNum, activation_fn=None)
+            self.variableSummaries(self.logits)
             pass
         pass
 
@@ -33,7 +33,7 @@ class RegressionModel(DNNModel):
         with tf.name_scope('LossFunction'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
             self.cost = tf.reduce_mean(cross_entropy)
-            self.__variableSummaries(self.cost)
+            self.variableSummaries(self.cost)
             pass
         pass
 

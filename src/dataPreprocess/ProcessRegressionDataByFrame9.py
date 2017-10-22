@@ -1,7 +1,7 @@
-from dataPreprocess.DataPreprocessor import *
+from dataPreprocess.RegressionDataPreprocessor import  *
 
-dataFilePath = "data/hdf5/APLAWDW_frame_9_classification.hdf5"
-dataPreprocessor = DataPreprocessor(dataFilePath,
+dataFilePath = "data/hdf5/APLAWDW_frame_9_regression.hdf5"
+dataPreprocessor = RegressionDataPreprocessor(dataFilePath,
                                     framSize=9,
                                     waveDirPath="data/APLAWDW/wav/",
                                     waveExtension=".wav",

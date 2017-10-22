@@ -16,17 +16,17 @@ class LSTMModel(DNNModel):
                 pass
             self.stack = rnn.MultiRNNCell(cells)
             self.outputs, _ = tf.nn.dynamic_rnn(self.stack, self.x, dtype=tf.float32)
-            self.logits = tf.contrib.layers.fully_connected(outputs, self.classNum, activation_fn=None)
-            self.__variableSummaries(self.logits)
+            self.logits = tf.contrib.layers.fully_connected(self.outputs, self.classNum, activation_fn=None)
+            self.variableSummaries(self.logits)
             pass
         pass
 
-    def __lossFunction(self):
+    def lossFunction(self):
         with tf.name_scope('LossFunction'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
             self.cost = tf.reduce_mean(cross_entropy)
             # self.cost = tf.reduce_mean(ctc_ops.ctc_loss(labels=self.y, inputs=self.logits, sequence_length=self.timestepSize, time_major=False))
-            self.__variableSummaries(self.cost)
+            self.variableSummaries(self.cost)
             pass
         pass
 

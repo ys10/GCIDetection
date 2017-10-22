@@ -37,7 +37,7 @@ class DNNModel(object):
             self.layerNum = layerNum
             self.classNum = classNum
             self.learningRate = learningRate
-            self.__variableSummaries(self.learningRate)
+            self.variableSummaries(self.learningRate)
             pass
         '''Place holder'''
         with tf.name_scope('PlaceHolder'):
@@ -46,9 +46,9 @@ class DNNModel(object):
             self.keep_prob = tf.placeholder(tf.float32)
             pass
         '''DNN model'''
-        self.__DNNModel()
+        self.DNNModel()
         '''Loss function'''
-        self.__lossFunction()
+        self.lossFunction()
         '''Optimizer'''
         with tf.name_scope('Optimizer'):
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
@@ -57,7 +57,7 @@ class DNNModel(object):
         with tf.name_scope('Evaluator'):
             self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
             self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
-            self.__variableSummaries(self.accuracy)
+            self.variableSummaries(self.accuracy)
             pass
         '''Model save'''
         # Initialize the saver to save session.
@@ -69,7 +69,7 @@ class DNNModel(object):
         self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
         pass
 
-    def __DNNModel(self):
+    def DNNModel(self):
         with tf.name_scope('DNNModel'):
             lstm_fw_cells = list()
             lstm_bw_cells = list()
@@ -91,15 +91,15 @@ class DNNModel(object):
                 dtype=tf.float32
             )
             self.logits = tf.contrib.layers.fully_connected(outputs, self.classNum, activation_fn=None)
-            self.__variableSummaries(self.logits)
+            self.variableSummaries(self.logits)
             pass
         pass
 
-    def __lossFunction(self):
+    def lossFunction(self):
         with tf.name_scope('LossFunction'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
             self.cost = tf.reduce_mean(cross_entropy)
-            self.__variableSummaries(self.cost)
+            self.variableSummaries(self.cost)
             pass
         pass
 
@@ -117,17 +117,17 @@ class DNNModel(object):
         self.summarySavePath = summarySavePath
         pass
 
-    def __openDataFile(self):
+    def openDataFile(self):
         self.dataFile = h5py.File(self.dataFilename)
         self.resultFile = h5py.File(self.resultFilename)
         pass
 
-    def __closeDataFile(self):
+    def closeDataFile(self):
         self.dataFile.close()
         self.resultFile.close()
         pass
 
-    def __variableSummaries(self, var):
+    def variableSummaries(self, var):
         with tf.name_scope('summaries'):
             mean = tf.reduce_mean(var)
             tf.summary.scalar('mean', mean)
@@ -163,7 +163,7 @@ class DNNModel(object):
             merged = tf.summary.merge_all()
             train_writer = tf.summary.FileWriter(self.summarySavePath, sess.graph)
             # Prepare data set.
-            self.__openDataFile()
+            self.openDataFile()
             dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
             # Prepare result writer.
             resultWriter = ResultWriter(self.resultFile, self.samplingRate)
@@ -205,7 +205,7 @@ class DNNModel(object):
                                   )
                     pass
                 pass
-            self.__closeDataFile()
+            self.closeDataFile()
             logging.info("Optimization Finished!")
             pass
         pass
@@ -224,7 +224,7 @@ class DNNModel(object):
                 logging.info("Model restore failed.")
                 return
             '''Prepare testing parameters.'''
-            self.__openDataFile()
+            self.openDataFile()
             # Prepare data set.
             dataSet = InputReader(dataFile=self.dataFile, batchSize=1, maxTimeStep=self.timeStepSize)
             # Prepare result writer.

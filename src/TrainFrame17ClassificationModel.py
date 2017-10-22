@@ -1,15 +1,15 @@
 from dnnModel.BLSTMModel import *
 
 
-class TrainFrameModel(object):
+class TrainFrame17ClassificationModel(object):
     def __init__(self):
-        self.model = BLSTMModel(inputSize=9, timeStepSize=None, hiddenSize=256, layerNum=2, classNum=2,
+        self.model = BLSTMModel(inputSize=17, timeStepSize=None, hiddenSize=256, layerNum=2, classNum=2,
                                 learningRate=1e-3)
-        self.dataFilename = "data/hdf5/APLAWDW_frame_9_classification.hdf5"
-        self.resultFilename = "data/hdf5/APLAWDW_frame_9_classification_result.hdf5"
+        self.dataFilename = "data/hdf5/APLAWDW_frame_17_classification.hdf5"
+        self.resultFilename = "data/hdf5/APLAWDW_frame_17_classification_result.hdf5"
         self.modelRestorePath = None
-        self.modelSavePath = "model/APLAWDW_frame_9_classification_model"
-        self.summarySavePath = "summary/APLAWDW_frame_9_classification_model/"
+        self.modelSavePath = "model/APLAWDW_frame_17_classification_model"
+        self.summarySavePath = "summary/APLAWDW_frame_17_classification_model/"
         pass
 
     def run(self):
@@ -23,7 +23,7 @@ class TrainFrameModel(object):
 
 
 def main():
-    frameModel = TrainFrameModel()
+    frameModel = TrainFrame17ClassificationModel()
     frameModel.run()
     pass
 

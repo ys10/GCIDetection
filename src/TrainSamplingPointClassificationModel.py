@@ -1,7 +1,7 @@
 from dnnModel.BLSTMModel import *
 
 
-class TrainSamplingPointModel(object):
+class TrainSamplingPointClassificationModel(object):
     def __init__(self):
         self.model = BLSTMModel(inputSize=1, timeStepSize=None, hiddenSize=256, layerNum=2, classNum=2,
                                 learningRate=1e-3)
@@ -23,7 +23,7 @@ class TrainSamplingPointModel(object):
 
 
 def main():
-    samplingPointModel = TrainSamplingPointModel()
+    samplingPointModel = TrainSamplingPointClassificationModel()
     samplingPointModel.run()
     pass
 
