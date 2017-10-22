@@ -1,4 +1,4 @@
-from src.dataPreprocess.DataPreprocessor import *
+from dataPreprocess.DataPreprocessor import *
 
 dataFilePath = "data/hdf5/APLAWDW_frame_9_classification.hdf5"
 dataPreprocessor = DataPreprocessor(dataFilePath,
