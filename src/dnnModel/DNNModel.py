@@ -108,6 +108,10 @@ class DNNModel(object):
         self.resultFilename = resultFilename
         pass
 
+    def setResultWriter(self, resultWriter):
+        self.resultWriter = resultWriter
+        pass
+
     def setModelSavePath(self, modelRestorePath=None, modelSavePath=None):
         self.modelRestorePath = modelRestorePath
         self.modelSavePath = modelSavePath
@@ -165,17 +169,14 @@ class DNNModel(object):
             # Prepare data set.
             self.openDataFile()
             dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
-            # Prepare result writer.
-            resultWriter = ResultWriter(self.resultFile, self.samplingRate)
             for i in range(self.trainIteration):
                 (batchX, batchY) = dataSet.getBatch(i)
-                summary, _, trainingCost, modelOutput = sess.run([merged, self.optimizer, self.cost, self.logits],
+                summary, _, trainingCost = sess.run([merged, self.optimizer, self.cost],
                                                         feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
                              + ", \tbatch loss= {:.6f}".format(trainingCost))
                 logging.debug("batchX:" + str(batchX[0]))
                 logging.debug("batchY:" + str(batchY[0]))
-                logging.debug("modelOutput:" + str(modelOutput[0]))
                 # Add summary.
                 train_writer.add_summary(summary, global_step=i)
                 # Save output result.
@@ -183,11 +184,6 @@ class DNNModel(object):
                     # Save model
                     self.saver.save(sess, self.modelSavePath, global_step=self.saveIteration)
                     logging.info("Model saved successfully to: " + self.modelSavePath)
-                    # Save output
-                    keyList = dataSet.getBatchKeyList(i)
-                    resultWriter.saveBatchResult(modelOutput, keyList)
-                    logging.info("Model output saved successfully:")
-                    logging.info("Keys of saved model outputs:" + str(keyList))
                     pass
                 # Display accuracy.
                 if (i + 1) % self.displayIteration == 0:
@@ -213,6 +209,8 @@ class DNNModel(object):
     def test(self, samplingRate=20000):
         #  Sampling rate
         self.samplingRate = samplingRate
+        #  Set result file of result writer.
+        self.resultWriter.setResultFile(self.resultFile)
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
             logging.info("Testing session started!")
@@ -227,8 +225,6 @@ class DNNModel(object):
             self.openDataFile()
             # Prepare data set.
             dataSet = InputReader(dataFile=self.dataFile, batchSize=1, maxTimeStep=self.timeStepSize)
-            # Prepare result writer.
-            resultWriter = ResultWriter(self.resultFile, self.samplingRate)
             # Test iteration.
             testIteration = dataSet.getBatchCount()
             '''Forward testing data.'''
@@ -237,7 +233,7 @@ class DNNModel(object):
                 modelOutput = sess.run([self.logits], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 # Save output
                 keyList = dataSet.getBatchKeyList(i)
-                resultWriter.saveBatchResult(modelOutput, keyList)
+                self.resultWriter.saveBatchResult(modelOutput, keyList)
                 pass
             pass
         logging.info("Testing finished!")
