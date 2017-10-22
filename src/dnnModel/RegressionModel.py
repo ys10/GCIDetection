@@ -31,8 +31,9 @@ class RegressionModel(DNNModel):
 
     def __lossFunction(self):
         with tf.name_scope('LossFunction'):
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
-            self.cost = tf.reduce_mean(cross_entropy)
+            # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
+            # self.cost = tf.reduce_mean(cross_entropy)
+            self.cost = tf.reduce_sum(tf.square(self.logits -  self.y))
             self.variableSummaries(self.cost)
             pass
         pass

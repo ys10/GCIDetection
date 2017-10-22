@@ -230,7 +230,7 @@ class DNNModel(object):
             '''Forward testing data.'''
             for i in range(testIteration):
                 (batchX, batchY) = dataSet.getBatch(i)
-                modelOutput = sess.run([self.logits], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
+                modelOutput = sess.run([tf.nn.softmax(self.logits)], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 # Save output
                 keyList = dataSet.getBatchKeyList(i)
                 self.resultWriter.saveBatchResult(modelOutput, keyList)
