@@ -1,5 +1,5 @@
 import unittest
-from src.resultEvaluation.GCI import *
+from resultEvaluation.GCI import *
 
 class TestGCI(unittest.TestCase):
 

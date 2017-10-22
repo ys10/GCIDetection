@@ -1,6 +1,6 @@
 import unittest
 import h5py
-from src.resultEvaluation.ResultEvaluator import *
+from resultEvaluation.ResultEvaluator import *
 
 
 class TestResultEvaluator(unittest.TestCase):
