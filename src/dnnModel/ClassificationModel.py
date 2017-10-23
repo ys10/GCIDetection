@@ -2,7 +2,7 @@ from dnnModel.DNNModel import *
 import tensorflow.contrib.rnn as rnn
 
 
-class BLSTMModel(DNNModel):
+class ClassificationModel(DNNModel):
     def DNNModel(self):
         with tf.name_scope('DNNModel'):
             lstm_fw_cells = list()

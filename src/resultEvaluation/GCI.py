@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class GCI(object):
     def __init__(self, location, borderLeft, borderRight):
         self.location = location
@@ -108,3 +111,13 @@ def getErrorList(correctList):
         errorList.append(gci.calError())
         pass
     return errorList
+
+
+def transGCIList2MarkMatrix(gciList, timeSteps):
+    maskMatrix = np.zeros(shape=(gciList.__len__(), timeSteps), dtype=np.short)
+    for i in range(gciList.__len__()):
+        maskStart = int(gciList[i].getBorderLeft())
+        maskEnd = int(gciList[i].getBorderRight())
+        maskMatrix[i][maskStart:maskEnd] = 1
+        pass
+    return list(maskMatrix.T)

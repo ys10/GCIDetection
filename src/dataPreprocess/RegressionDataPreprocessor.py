@@ -2,10 +2,10 @@ from dataPreprocess.DataPreprocessor import *
 
 
 class RegressionDataPreprocessor(DataPreprocessor):
-    def __init__(self, dataFilePath, framSize=1, waveDirPath="data/wav/", waveExtension=".wav",
+    def __init__(self, dataFilePath, frameSize=1, frameStride=1, waveDirPath="data/wav/", waveExtension=".wav",
                  markDirPath="data/mark/",
                  markExtension=".mark"):
-        DataPreprocessor.__init__(self, dataFilePath, framSize, waveDirPath, waveExtension, markDirPath, markExtension)
+        DataPreprocessor.__init__(self, dataFilePath, frameSize,  frameStride, waveDirPath, waveExtension, markDirPath, markExtension)
         self.gciCriticalDistance = None
         pass
 
@@ -67,12 +67,15 @@ class RegressionDataPreprocessor(DataPreprocessor):
         print("labelSeq:"+str(labelSeq))
         return labelSeq
 
+    def transLocations2GCIMask(self, locations, samplingRate):
+        return None
+
     pass
 
 
 def main():
     dataFilePath = "data/hdf5/APLAWDW_test.hdf5"
-    dataPreprocessor = RegressionDataPreprocessor(dataFilePath, framSize=1)
+    dataPreprocessor = RegressionDataPreprocessor(dataFilePath, frameSize=1)
     dataPreprocessor.process()
     pass
 

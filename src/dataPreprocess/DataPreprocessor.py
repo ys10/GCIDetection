@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import h5py
 import wave
 import numpy
@@ -25,11 +27,12 @@ logging.getLogger('').addHandler(console)
 
 
 class DataPreprocessor(object):
-    def __init__(self, dataFilePath, framSize=1, waveDirPath="data/wav/", waveExtension=".wav",
+    def __init__(self, dataFilePath, frameSize=1, frameStride=1, waveDirPath="data/wav/", waveExtension=".wav",
                  markDirPath="data/mark/",
                  markExtension=".mark"):
         self.dataFilePath = dataFilePath
-        self.frameSize = framSize
+        self.frameSize = frameSize
+        self.frameStride = frameStride
         self.waveDirPath = waveDirPath
         self.markDirPath = markDirPath
         self.waveExtension = waveExtension
@@ -48,24 +51,6 @@ class DataPreprocessor(object):
         logging.debug("All files name: " + str(keyList))
         return keyList
 
-    def getDataType(self, sampleWidth):
-        if (sampleWidth == 2):
-            dataType = numpy.short
-        else:
-            dataType = numpy.int32
-        return dataType
-
-    def getFramedLength(self, dataLength):
-        length = int(ceil(dataLength / self.frameSize))
-        return length
-
-    def padWave(self, waveData, dataType):
-        length = self.getFramedLength(waveData.__len__()) * self.frameSize
-        logging.debug("length after padding:" + str(length))
-        paddedData = numpy.zeros(shape=(length,), dtype=dataType)
-        paddedData[:waveData.__len__()] = waveData
-        return paddedData
-
     def getLocations(self, markFile):
         locations = list()
         while 1:
@@ -78,19 +63,48 @@ class DataPreprocessor(object):
             pass
         return locations
 
-    # Transform GCI locations to label(binary classification) sequence.
-    def transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
-        zero = numpy.zeros(shape=(labelSeqLength, 1), dtype=numpy.float32)
-        one = numpy.ones(shape=(labelSeqLength, 1), dtype=numpy.float32)
-        labelSeq = numpy.reshape(numpy.asarray([zero, one]).transpose(), [labelSeqLength, 2])
-        logging.debug("mark data shape:" + str(labelSeq.shape))
-        for location in locations:
-            labelLocation = floor(int(location * samplingRate / self.frameSize)) - 1
-            # logging.debug("Time:" + str(labelLocation))
-            labelSeq[labelLocation][0] = 1.0
-            labelSeq[labelLocation][1] = 0.0
+    def getDataType(self, sampleWidth):
+        if (sampleWidth == 2):
+            dataType = numpy.short
+        else:
+            dataType = numpy.int32
+        return dataType
+
+    def getFramedLength(self, dataLength):
+        count = self.getFrameCount(dataLength)
+        length = (count - 1) * self.frameStride + self.frameSize
+        return length
+
+    def getFrameCount(self, dataLength):
+        count = int(ceil((dataLength - self.frameSize) / self.frameStride)) + 1
+        return count
+
+    def getLabelIndex(self, location, samplingRate, framedLength):
+        frameCount = self.getFrameCount(framedLength)
+        if (location * samplingRate > self.frameStride * frameCount):
+            labelIndex = frameCount
             pass
-        return labelSeq
+        else:
+            labelIndex = floor(int(location * samplingRate / self.frameStride))
+        return labelIndex
+
+    def padWave(self, waveData, dataType):
+        length = self.getFramedLength(waveData.__len__())
+        logging.debug("length after padding:" + str(length))
+        paddedData = numpy.zeros(shape=(length,), dtype=dataType)
+        paddedData[:waveData.__len__()] = waveData
+        return paddedData
+
+    def getFramedInput(self, waveData, samplingRate):
+        waveData = list(waveData.astype(numpy.float32))
+        framedCount = self.getFrameCount(waveData.__len__())
+        input = list()
+        for i in range(framedCount):
+            startIndex = i * self.frameStride
+            frameData = waveData[startIndex: startIndex + self.frameSize]
+            input.append(frameData)
+            pass
+        return input
 
     def process(self):
         # Prepare an hdf5 file to save the process result
@@ -112,32 +126,37 @@ class DataPreprocessor(object):
                     waveData = numpy.fromstring(strWaveData, dtype=dataType)
                     framedLength = self.getFramedLength(nSamplingPoints)
                     waveData = self.padWave(waveData, dataType)
-                    waveData = numpy.reshape(waveData, (framedLength, self.frameSize))
-                    logging.debug("\twave data shape:\t" + str(waveData.shape))
+                    # waveData = numpy.reshape(waveData, (framedLength, self.frameSize))
+                    # logging.debug("\twave data shape:\t" + str(waveData.shape))
+                    input = self.getFramedInput(waveData, samplingRate)
                     # write wave date into hdf5 file.
-                    h5File[fileName + "/input"] = list(waveData.astype(numpy.float32))
+                    h5File[fileName + "/input"] = input
                     pass  # waveFile close
                 # Read GCI locations.
                 with open(self.markDirPath + fileName + self.markExtension) as markFile:
                     locations = self.getLocations(markFile)
-                    labelSeq = self.transLocations2LabelSeq(locations, framedLength, samplingRate)
+                    '''Process locations to label sequence.'''
+                    frameCount = self.getFrameCount(framedLength)
+                    labelSeq = self.transLocations2LabelSeq(locations, frameCount, samplingRate)
                     # write label date into hdf5 file.
                     h5File[fileName + "/label"] = labelSeq
+                    '''Process locations to gci mask.'''
+                    mask = self.transLocations2GCIMask(locations, framedLength, samplingRate)
+                    if mask is not None:
+                        h5File[fileName + "/mask"] = mask
+                        pass
                     pass  # markFile close
                 pass  #
             pass  # h5File close
         pass
 
-    pass
+    # Transform GCI locations to label(binary classification) sequence.
+    @abstractmethod
+    def transLocations2LabelSeq(self, locations, labelSeqLength, samplingRate):
+        pass
 
+    @abstractmethod
+    def transLocations2GCIMask(self, locations, frameCount, samplingRate):
+        pass
 
-def main():
-    dataFilePath = "data/hdf5/APLAWDW_test.hdf5"
-    dataPreprocessor = DataPreprocessor(dataFilePath, framSize=1)
-    dataPreprocessor.process()
-    pass
-
-
-if __name__ == '__main__':
-    main()
     pass
