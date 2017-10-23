@@ -8,4 +8,5 @@ dataPreprocessor = RegressionDataPreprocessor(dataFilePath,
                                               waveExtension=".wav",
                                               markDirPath="data/APLAWDW/mark/",
                                               markExtension=".marks")
+dataPreprocessor.setGCICriticalDistance(gciCriticalDistance=80)
 dataPreprocessor.process()

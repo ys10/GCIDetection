@@ -9,13 +9,13 @@ class RegressionDataPreprocessor(DataPreprocessor):
         self.gciCriticalDistance = None
         pass
 
-    def setGCICriticalDistance(self, gciCriticalDistance=800):
+    def setGCICriticalDistance(self, gciCriticalDistance=400):
         self.gciCriticalDistance = gciCriticalDistance
         pass
 
     def getGCICriticalDistance(self):
         if self.gciCriticalDistance is None:
-            self.gciCriticalDistance = 800
+            self.gciCriticalDistance = 400
             pass
         return self.gciCriticalDistance
 
@@ -33,7 +33,7 @@ class RegressionDataPreprocessor(DataPreprocessor):
         logging.debug("mark data shape:" + str(labelSeq.shape))
         labelLocations = list()
         for location in locations:
-            labelLocation = floor(int(location * samplingRate / self.frameSize)) - 1
+            labelLocation = self.getLabelIndex(location, samplingRate, labelSeqLength)
             # logging.debug("Time:" + str(labelLocation))
             labelLocations.append(labelLocation)
             pass
