@@ -1,13 +1,11 @@
 import logging
 import os
-from abc import abstractmethod
 
 import h5py
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
 from dataAccessor.InputReader import InputReader
-from dataAccessor.ResultWriter import ResultWriter
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
@@ -29,20 +27,23 @@ logging.getLogger('').addHandler(console)
 
 
 class DNNModel(object):
-    def __init__(self, inputSize, timeStepSize, hiddenSize, layerNum, classNum, learningRate=1e-3):
+    def __init__(self, inputSize, timeStepSize, hiddenSize, layerNum, outputSize, classNum, learningRate=1e-3):
         with tf.name_scope('ModelParameter'):
             self.inputSize = inputSize
             self.timeStepSize = timeStepSize
             self.hiddenSize = hiddenSize
             self.layerNum = layerNum
+            self.outputSize = outputSize
             self.classNum = classNum
             self.learningRate = learningRate
             self.variableSummaries(self.learningRate)
             pass
         '''Place holder'''
         with tf.name_scope('PlaceHolder'):
-            self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])
-            self.y = tf.placeholder(tf.float32, [None, None, self.classNum])
+            self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])# X shape: (batchSize, timeSteps, inputSize)
+            self.y = tf.placeholder(tf.float32, [None, None, self.outputSize])# Y shape: (batchSize, timeSteps, outputSize)
+            self.mask = tf.placeholder(tf.float32, [None, None, None]) # Mask shape: (batchSize, timeSteps(nGCIs), timeSteps)
+            self.gciCount = tf.placeholder(tf.float32, [None, None])  # GCI count shape: (batchSize, 1)
             self.keep_prob = tf.placeholder(tf.float32)
             pass
         '''DNN model'''
@@ -54,11 +55,7 @@ class DNNModel(object):
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.cost)
             pass
         '''Evaluator'''
-        with tf.name_scope('Evaluator'):
-            self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
-            self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
-            self.variableSummaries(self.accuracy)
-            pass
+        self.evaluator()
         '''Model save'''
         # Initialize the saver to save session.
         self.saver = tf.train.Saver(max_to_keep=50)
@@ -103,6 +100,14 @@ class DNNModel(object):
             pass
         pass
 
+    def evaluator(self):
+        with tf.name_scope('Evaluator'):
+            self.correct_pred = tf.equal(tf.argmax(self.logits, 2), tf.argmax(self.y, 2))
+            self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, tf.float32))
+            self.variableSummaries(self.accuracy)
+            pass
+        pass
+
     def setDataFilename(self, dataFilename, resultFilename):
         self.dataFilename = dataFilename
         self.resultFilename = resultFilename
@@ -132,6 +137,7 @@ class DNNModel(object):
         pass
 
     def variableSummaries(self, var):
+        var = tf.cast(var, dtype=tf.float32)
         with tf.name_scope('summaries'):
             mean = tf.reduce_mean(var)
             tf.summary.scalar('mean', mean)

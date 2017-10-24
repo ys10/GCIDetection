@@ -3,7 +3,7 @@ from dnnModel.ClassificationModel import *
 
 class TrainFrame9ClassificationModel(object):
     def __init__(self):
-        self.model = ClassificationModel(inputSize=9, timeStepSize=None, hiddenSize=256, layerNum=2, classNum=2,
+        self.model = ClassificationModel(inputSize=9, timeStepSize=None, hiddenSize=256, layerNum=2, outputSize=1, classNum=2,
                                          learningRate=1e-3)
         self.dataFilename = "data/hdf5/APLAWDW_frame_9_classification.hdf5"
         self.resultFilename = "data/hdf5/APLAWDW_frame_9_classification_result.hdf5"

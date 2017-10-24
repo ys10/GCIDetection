@@ -4,4 +4,4 @@ config/*
 log/*
 summary/*
 .idea/*
-src/__pycache__/*
+src/TensorFlowDemo.py

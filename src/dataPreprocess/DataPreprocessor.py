@@ -81,8 +81,8 @@ class DataPreprocessor(object):
 
     def getLabelIndex(self, location, samplingRate, framedLength):
         frameCount = self.getFrameCount(framedLength)
-        if (location * samplingRate > self.frameStride * frameCount):
-            labelIndex = frameCount
+        if (location * samplingRate >= self.frameStride * frameCount):
+            labelIndex = frameCount-1
             pass
         else:
             labelIndex = floor(int(location * samplingRate / self.frameStride))
@@ -145,6 +145,8 @@ class DataPreprocessor(object):
                     if mask is not None:
                         h5File[fileName + "/mask"] = mask
                         pass
+                    '''Process gci count.'''
+                    h5File[fileName + "/gciCount"] = numpy.asarray([len(locations)], dtype=numpy.float32)
                     pass  # markFile close
                 pass  #
             pass  # h5File close

@@ -87,6 +87,31 @@ def pad_sequences(sequences, maxlen=None, dtype=np.double,
             raise ValueError('Padding type "%s" not understood' % padding)
     return x, lengths
 
+# Matrices shape: (batchSize, timeSteps, timeSteps)
+def pad_matrices_dim2(matrices, maxlen=None, dtype=np.double, padding='post', truncating='post', value=0.):
+    lengths = np.asarray([len(s[0]) for s in matrices], dtype=np.int64)
+    if maxlen is None:
+        maxlen = np.max(lengths)
+    paddedMatrices = []
+    for sequences in matrices:
+        s , _= pad_sequences(sequences, maxlen, dtype, padding, truncating, value)
+        paddedMatrices.append(s)
+        pass
+    return paddedMatrices
+
+# Matrices shape: (batchSize, timeSteps, timeSteps)
+def pad_matrices_dim1(matrices, maxlen=None, dtype=np.double, padding='post', truncating='post', value=0.):
+    lengths = np.asarray([len(s) for s in matrices], dtype=np.int64)
+    if maxlen is None:
+        maxlen = np.max(lengths)
+    paddedMatrices = []
+    for sequences in matrices:
+        matrix = np.zeros(shape=(maxlen, maxlen), dtype=dtype)
+        matrix[:len(sequences)][:]= sequences
+        paddedMatrices.append(matrix)
+        pass
+    return paddedMatrices
+
 def tensor_to_array(tensor):
     if len(tensor.shape) < 1:
         return []
