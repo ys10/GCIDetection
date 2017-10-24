@@ -112,8 +112,20 @@ def getErrorList(correctList):
         pass
     return errorList
 
+def transSentenceY2MaskMatrix(sentenceY, defaultRadius=5):
+    frameCount = len(sentenceY)
+    shape = np.shape(sentenceY)
+    reference = np.reshape(sentenceY, newshape=(shape[1], shape[0]))[0]
+    gciList = transRef2GCIList(reference, defaultRadius)
+    gciMaskMatrix = transGCIList2GCIMaskMatrix(gciList, frameCount)  # GCIMaskMatrix shape: (nGCIs, frameCount)
+    maskMatrix = np.zeros(shape=(frameCount, frameCount), dtype=np.float32)
+    for i, labelIndex in enumerate(reference):
+        maskMatrix[int(labelIndex)] = gciMaskMatrix[i]
+        pass
+    return maskMatrix
 
-def transGCIList2GCIMarkMatrix(gciList, timeSteps):
+
+def transGCIList2GCIMaskMatrix(gciList, timeSteps):
     maskMatrix = np.zeros(shape=(gciList.__len__(), timeSteps), dtype=np.short)
     for i in range(gciList.__len__()):
         maskStart = int(gciList[i].getBorderLeft())

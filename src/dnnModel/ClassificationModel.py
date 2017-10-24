@@ -36,21 +36,11 @@ class ClassificationModel(DNNModel):
 
     def lossFunction(self):
         with tf.name_scope('LossFunction'):
-            # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y)
-            # cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=self.y, logits=self.logits, pos_weight=5000)
             with tf.name_scope('difference'):
                 self.difference = tf.subtract(self.logits, self.y)
-                # self.cost = tf.reduce_sum(tf.cast(self.difference, dtype=tf.float32))
             with tf.name_scope('costDistribute'):
-                # maskShape = tf.shape(self.mask)  # (BatchSize, timeSteps, timeSteps)
-                # tempMask = tf.reshape(self.mask, shape=[maskShape[0] * maskShape[1], maskShape[2]])
-                # seqShape = tf.shape(self.difference)  # (BatchSize, timeSteps, outputSize)
-                # tempSeq = tf.reshape(tf.transpose(self.difference, perm=[1, 0, 2]),
-                #                      shape=[seqShape[1], seqShape[0] * seqShape[2]])
-                # product = tf.matmul(tempMask, tempSeq)  # (BatchSize * timeSteps, BatchSize * outputSize)
-                # self.costDistribute = tf.reshape(product, shape=[maskShape[0], maskShape[1], seqShape[2]])
                 self.costDistribute = tf.matmul(self.mask, self.difference)
-                # self.costDistribute = tf.transpose(product, perm=[1, 0, 2])
+                # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
             with tf.name_scope('cost'):
                 self.cost = tf.reduce_mean(tf.square(self.costDistribute))
                 self.variableSummaries(self.cost)
@@ -63,21 +53,11 @@ class ClassificationModel(DNNModel):
             difference = tf.cast(tf.subtract(tf.argmin(self.logits, 2), tf.argmin(self.y, 2)), tf.float32)
             diffShape = tf.shape(difference)  # (BatchSize, timeSteps)
             difference = tf.reshape(difference, shape=[diffShape[0], diffShape[1], 1])  # (BatchSize, timeSteps, 1)
-            # #
-            # maskShape = tf.shape(self.mask)  # (BatchSize, timeSteps, timeSteps)
-            # tempMask = tf.reshape(self.mask, shape=[maskShape[0] * maskShape[1], maskShape[2]])
-            # seqShape = tf.shape(difference)  # (BatchSize, timeSteps, 1)
-            # tempSeq = tf.reshape(tf.transpose(difference, perm=[1, 0, 2]),
-            #                      shape=[seqShape[1], seqShape[0] * seqShape[2]])
-            # product = tf.matmul(tempMask, tempSeq)  # (BatchSize * timeSteps, BatchSize * outputSize)
-            # markedResult = tf.reshape(product, shape=[maskShape[0], maskShape[1], seqShape[2]])
             markedResult = tf.matmul(self.mask, difference)  # Shape: (BatchSIze, timeSteps, 1)
             #
             nonzero = tf.cast(tf.count_nonzero(markedResult), dtype=tf.float32)
             falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(markedResult)), dtype=tf.float32)
             nGCIS = tf.reduce_sum(self.gciCount)
-            # y, _, count = tf.unique_with_counts(tf.reshape(markedResult, shape=[-1]))
-            # nGCIS = tf.cast(tf.reduce_sum(count), dtype=tf.float32)
             correct = nGCIS - nonzero
             miss = nonzero - falseAlarm
             # falseAlarm = tf.subtract(nonzero, miss)
@@ -107,6 +87,8 @@ class ClassificationModel(DNNModel):
         self.batchSize = batchSize
         #  Sampling rate
         self.samplingRate = samplingRate
+        #  Training epoch
+        self.epoch = 0
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
@@ -120,10 +102,10 @@ class ClassificationModel(DNNModel):
             merged = tf.summary.merge_all()
             train_writer = tf.summary.FileWriter(self.summarySavePath, sess.graph)
             # Prepare data set.
-            self.openDataFile()
-            dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
+            self.openTrainingDataFile()
+            trainingDataSet = InputReader(self.trainingDataFile, self.batchSize, self.timeStepSize)
             for i in range(self.trainIteration):
-                (batchX, batchY, batchMask, batchGCICount) = dataSet.getBatch(i)
+                (batchX, batchY, batchMask, batchGCICount) = trainingDataSet.getBatch(i)
                 summary, _, trainingCost = sess.run([merged, self.optimizer, self.cost],
                                                     feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
                                                                self.gciCount: batchGCICount, self.keep_prob: 1.0})
@@ -145,7 +127,7 @@ class ClassificationModel(DNNModel):
                         [self.cost, self.missRate, self.correctRate, self.falseAlarmedRate],
                         feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask, self.gciCount: batchGCICount,
                                    self.keep_prob: 1.0})
-                    logging.info("Epoch:" + str(dataSet.completedEpoch)
+                    logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tbatch loss= {:.6f}".format(trainCost)
                                  + ", \t training correct rate= {:.6f}".format(trainCorrectRate)
@@ -153,8 +135,38 @@ class ClassificationModel(DNNModel):
                                  + ", \t training false alarmed rate= {:.6f}".format(trainFalseAlarmedRate)
                                  )
                     pass
+                # Validate
+                if (trainingDataSet.completedEpoch > self.epoch):
+                    validationDataSet = InputReader(self.validationDataFile, batchSize=1, maxTimeStep=self.timeStepSize)
+                    validationIteration = validationDataSet.getBatchCount()
+                    validationCostSum  = 0.0
+                    validationMissRateSum  = 0.0
+                    validationCorrectRateSum  = 0.0
+                    validationFalseAlarmedRateSum = 0.0
+                    for i in range(validationIteration):
+                        validationCost, validationMissRate, validationCorrectRate, validationFalseAlarmedRate = sess.run(
+                            [self.cost, self.missRate, self.correctRate, self.falseAlarmedRate],
+                            feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
+                                       self.gciCount: batchGCICount,
+                                       self.keep_prob: 1.0})
+                        validationCostSum += validationCost
+                        validationMissRateSum += validationMissRate
+                        validationCorrectRateSum += validationCorrectRate
+                        validationFalseAlarmedRateSum +=validationFalseAlarmedRate
+                        pass
+                    logging.info("Epoch:" + str(validationDataSet.completedEpoch)
+                                 + ", \titeration:" + str(i)
+                                 + ", \tmean loss= {:.6f}".format(validationCostSum / validationIteration)
+                                 + ", \tmean validation correct rate= {:.6f}".format(validationCorrectRateSum / validationIteration)
+                                 + ", \tmean validation miss rate= {:.6f}".format(validationMissRateSum / validationIteration)
+                                 + ", \tmean validation false alarmed rate= {:.6f}".format(validationFalseAlarmedRateSum / validationIteration)
+                                 )
+                    # Update epoch.
+                    self.epoch = trainingDataSet.completedEpoch
+                    pass
+                    logging.info("Validation Finished!")
                 pass
-            self.closeDataFile()
+            self.closeTrainingDataFile()
             logging.info("Optimization Finished!")
             pass
         pass

@@ -1,5 +1,5 @@
 from dataPreprocess.DataPreprocessor import *
-from resultEvaluation.GCI import *
+# from resultEvaluation.GCI import *
 
 
 class ClassificationDataPreprocessor(DataPreprocessor):
@@ -17,20 +17,20 @@ class ClassificationDataPreprocessor(DataPreprocessor):
             pass
         return labelSeq
 
-    def transLocations2GCIMask(self, locations, framedLength, samplingRate):
-        frameCount = self.getFrameCount(framedLength)
-        reference = list()
-        for location in locations:
-            labelIndex = self.getLabelIndex(location, samplingRate, framedLength)
-            reference.append(labelIndex)
-            pass
-        gciList = transRef2GCIList(reference, self.defaultRadius)
-        gciMaskMatrix = transGCIList2GCIMarkMatrix(gciList, frameCount)#  GCIMaskMatrix shape: (nGCIs, frameCount)
-        maskMatrix = np.zeros(shape=(frameCount, frameCount), dtype=numpy.float32)
-        for i, labelIndex in enumerate(reference):
-            maskMatrix[labelIndex] = gciMaskMatrix[i]
-            pass
-        return maskMatrix
+    # def transLocations2GCIMask(self, locations, framedLength, samplingRate):
+    #     frameCount = self.getFrameCount(framedLength)
+    #     reference = list()
+    #     for location in locations:
+    #         labelIndex = self.getLabelIndex(location, samplingRate, framedLength)
+    #         reference.append(labelIndex)
+    #         pass
+    #     gciList = transRef2GCIList(reference, self.defaultRadius)
+    #     gciMaskMatrix = transGCIList2GCIMaskVector(gciList, frameCount)#  GCIMaskMatrix shape: (nGCIs, frameCount)
+    #     maskMatrix = np.zeros(shape=(frameCount, frameCount), dtype=numpy.float32)
+    #     for i, labelIndex in enumerate(reference):
+    #         maskMatrix[labelIndex] = gciMaskMatrix[i]
+    #         pass
+    #     return maskMatrix
 
     def setDefaultRadius(self, defaultRadius):
         self.defaultRadius = defaultRadius

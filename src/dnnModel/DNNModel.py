@@ -108,8 +108,13 @@ class DNNModel(object):
             pass
         pass
 
-    def setDataFilename(self, dataFilename, resultFilename):
-        self.dataFilename = dataFilename
+    def setTrainingDataFilename(self, trainingDataFilename, validationDataFilename):
+        self.trainingDataFilename = trainingDataFilename
+        self.validationDataFilename = validationDataFilename
+        pass
+
+    def setTestingDataFilename(self, testingDataFilename, resultFilename):
+        self.testingDataFilename = testingDataFilename
         self.resultFilename = resultFilename
         pass
 
@@ -126,13 +131,23 @@ class DNNModel(object):
         self.summarySavePath = summarySavePath
         pass
 
-    def openDataFile(self):
-        self.dataFile = h5py.File(self.dataFilename)
+    def openTrainingDataFile(self):
+        self.trainingDataFile = h5py.File(self.trainingDataFilename)
+        self.validationDataFile = h5py.File(self.validationDataFilename)
+        pass
+
+    def openTestingDataFile(self):
+        self.testingDataFile = h5py.File(self.testingDataFilename)
         self.resultFile = h5py.File(self.resultFilename)
         pass
 
-    def closeDataFile(self):
-        self.dataFile.close()
+    def closeTrainingDataFile(self):
+        self.trainingDataFile.close()
+        self.validationDataFile.close()
+        pass
+
+    def closeTestingDataFile(self):
+        self.testingDataFile.close()
         self.resultFile.close()
         pass
 
@@ -173,10 +188,10 @@ class DNNModel(object):
             merged = tf.summary.merge_all()
             train_writer = tf.summary.FileWriter(self.summarySavePath, sess.graph)
             # Prepare data set.
-            self.openDataFile()
-            dataSet = InputReader(self.dataFile, self.batchSize, self.timeStepSize)
+            self.openTrainingDataFile()
+            trainingDataSet = InputReader(self.trainingDataFile, self.batchSize, self.timeStepSize)
             for i in range(self.trainIteration):
-                (batchX, batchY) = dataSet.getBatch(i)
+                (batchX, batchY) = trainingDataSet.getBatch(i)
                 summary, _, trainingCost = sess.run([merged, self.optimizer, self.cost],
                                                         feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
@@ -196,7 +211,7 @@ class DNNModel(object):
                     train_logits, train_y, train_correct_pred, train_accuracy = sess.run(
                         [self.logits, self.y, self.correct_pred, self.accuracy],
                         feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
-                    logging.info("Epoch:" + str(dataSet.completedEpoch)
+                    logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tbatch loss= {:.6f}".format(trainingCost)
                                  + ", \t training accuracy= {:.6f}".format(train_accuracy)
@@ -207,7 +222,7 @@ class DNNModel(object):
                                   )
                     pass
                 pass
-            self.closeDataFile()
+            self.closeTrainingDataFile()
             logging.info("Optimization Finished!")
             pass
         pass
@@ -228,20 +243,21 @@ class DNNModel(object):
                 logging.info("Model restore failed.")
                 return
             '''Prepare testing parameters.'''
-            self.openDataFile()
+            self.openTestingDataFile()
             # Prepare data set.
-            dataSet = InputReader(dataFile=self.dataFile, batchSize=1, maxTimeStep=self.timeStepSize)
+            testDataSet = InputReader(dataFile=self.testingDataFile, batchSize=1, maxTimeStep=self.timeStepSize)
             # Test iteration.
-            testIteration = dataSet.getBatchCount()
+            testIteration = testDataSet.getBatchCount()
             '''Forward testing data.'''
             for i in range(testIteration):
-                (batchX, batchY) = dataSet.getBatch(i)
-                modelOutput = sess.run([tf.nn.softmax(self.logits)], feed_dict={self.x: batchX, self.y: batchY, self.keep_prob: 1.0})
+                (batchX, batchY, batchGCICount) = testDataSet.getBatch(i)
+                modelOutput = sess.run([tf.nn.softmax(self.logits)], feed_dict={self.x: batchX, self.y: batchY, self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 # Save output
-                keyList = dataSet.getBatchKeyList(i)
+                keyList = testDataSet.getBatchKeyList(i)
                 self.resultWriter.saveBatchResult(modelOutput, keyList)
                 pass
             pass
+            self.closeTestingDataFile()
         logging.info("Testing finished!")
         pass
 

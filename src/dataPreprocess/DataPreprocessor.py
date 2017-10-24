@@ -141,10 +141,10 @@ class DataPreprocessor(object):
                     # write label date into hdf5 file.
                     h5File[fileName + "/label"] = labelSeq
                     '''Process locations to gci mask.'''
-                    mask = self.transLocations2GCIMask(locations, framedLength, samplingRate)
-                    if mask is not None:
-                        h5File[fileName + "/mask"] = mask
-                        pass
+                    # mask = self.transLocations2GCIMask(locations, framedLength, samplingRate)
+                    # if mask is not None:
+                    #     h5File[fileName + "/mask"] = mask
+                    #     pass
                     '''Process gci count.'''
                     h5File[fileName + "/gciCount"] = numpy.asarray([len(locations)], dtype=numpy.float32)
                     pass  # markFile close

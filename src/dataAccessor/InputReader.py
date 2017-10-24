@@ -1,6 +1,7 @@
 import math
 
 from dataAccessor.utils import *
+from resultEvaluation.GCI import *
 
 
 class InputReader(object):
@@ -30,15 +31,17 @@ class InputReader(object):
                 pass
             sentenceX = self.dataFile[self.keyList[j] + "/input"]
             sentenceY = self.dataFile[self.keyList[j] + "/label"]
-            maskMatrix = self.dataFile[self.keyList[j] + "/mask"]
+            # maskMatrix = self.dataFile[self.keyList[j] + "/mask"]
             gciCount = self.dataFile[self.keyList[j] + "/gciCount"]
             batchX.append(sentenceX)
             batchY.append(sentenceY)
+            maskMatrix = self.getMask(sentenceY)
             batchMask.append(maskMatrix)
             batchGCICount.append(gciCount)
             pass
         batchX, _ = pad_sequences(batchX, maxlen=self.maxTimeStep)
         batchY, _ = pad_sequences(batchY, maxlen=self.maxTimeStep)
+        # batchMask, _ = pad_sequences(batchMask, maxlen=self.maxTimeStep)
         batchMask = pad_matrices_dim1(pad_matrices_dim2(batchMask, maxlen=self.maxTimeStep))
         return (batchX, batchY, batchMask, batchGCICount)
 
@@ -47,5 +50,9 @@ class InputReader(object):
         endKeyIndex = (batchIndex + 1) * self.batchSize
         keyList = self.keyList[startKeyIndex:endKeyIndex]
         return keyList
+
+    def getMask(self, sentencesY, defaultRadius=40):
+        maskMatrix = transSentenceY2MaskMatrix(sentencesY, defaultRadius)
+        return maskMatrix
 
     pass
