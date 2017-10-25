@@ -12,7 +12,7 @@ log_file_name = "log/dataProcess.log"
 if not os.path.exists(log_file_name):
     f = open(log_file_name, 'w')
     f.close()
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename=log_file_name,
@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO,
 
 ''' Output to the console.'''
 console = logging.StreamHandler()
-console.setLevel(logging.INFO)
+console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
@@ -135,6 +135,7 @@ class DataPreprocessor(object):
                 # Read GCI locations.
                 with open(self.markDirPath + fileName + self.markExtension) as markFile:
                     locations = self.getLocations(markFile)
+                    logging.debug("gci locations:" + str(locations))
                     '''Process locations to label sequence.'''
                     frameCount = self.getFrameCount(framedLength)
                     labelSeq = self.transLocations2LabelSeq(locations, frameCount, samplingRate)
@@ -146,7 +147,9 @@ class DataPreprocessor(object):
                     #     h5File[fileName + "/mask"] = mask
                     #     pass
                     '''Process gci count.'''
-                    h5File[fileName + "/gciCount"] = numpy.asarray([len(locations)], dtype=numpy.float32)
+                    gciCount = [len(locations)]
+                    logging.debug("gciCount:" + str(gciCount))
+                    h5File[fileName + "/gciCount"] = numpy.asarray(gciCount, dtype=numpy.float32)
                     pass  # markFile close
                 pass  #
             pass  # h5File close

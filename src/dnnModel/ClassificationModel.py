@@ -24,11 +24,14 @@ class ClassificationModel(DNNModel):
                 self.x,
                 dtype=tf.float32
             )
-            linearOutput = tf.nn.softmax(
-                tf.contrib.layers.fully_connected(rnnOutputs, self.outputSize, activation_fn=None))
+            self.linearOutput = tf.contrib.layers.fully_connected(rnnOutputs, self.outputSize, activation_fn=None)
             with tf.name_scope('logits'):
-                self.logits = linearOutput
+                self.logits = tf.nn.softmax(self.linearOutput)
                 self.variableSummaries(self.logits)
+                pass
+            with tf.name_scope('results'):
+                self.results = tf.argmin(self.logits, 2)
+                self.estimatedGCICount = tf.reduce_sum(self.results)
                 pass
             # self.cost = tf.reduce_sum(tf.square(tf.cast(self.logits, dtype=tf.float32) - self.y))
             pass
@@ -41,8 +44,18 @@ class ClassificationModel(DNNModel):
             with tf.name_scope('costDistribute'):
                 self.costDistribute = tf.matmul(self.mask, self.difference)
                 # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
+            with tf.name_scope('larynxCycleCost'):
+                self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
+                self.variableSummaries(self.larynxCycleCost)
+                pass
+            with tf.name_scope('outOfLarynxCycleCost'):
+                cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.linearOutput)
+                self.outOfLarynxCycleCost = tf.reduce_sum(cross_entropy)
+                self.variableSummaries(self.outOfLarynxCycleCost)
+                pass
             with tf.name_scope('cost'):
-                self.cost = tf.reduce_mean(tf.square(self.costDistribute))
+                costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
+                self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
                 self.variableSummaries(self.cost)
                 pass
             pass
@@ -57,20 +70,20 @@ class ClassificationModel(DNNModel):
             #
             nonzero = tf.cast(tf.count_nonzero(markedResult), dtype=tf.float32)
             falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(markedResult)), dtype=tf.float32)
-            nGCIS = tf.reduce_sum(self.gciCount)
-            correct = nGCIS - nonzero
+            self.nGCIs = tf.reduce_sum(self.gciCount)
+            correct = self.nGCIs - nonzero
             miss = nonzero - falseAlarm
             # falseAlarm = tf.subtract(nonzero, miss)
             with tf.name_scope('miss'):
-                self.missRate = tf.div(miss, nGCIS)
+                self.missRate = tf.div(miss, self.nGCIs)
                 self.variableSummaries(self.missRate)
                 pass
             with tf.name_scope('correctRate'):
-                self.correctRate = tf.div(correct, nGCIS)
+                self.correctRate = tf.div(correct, self.nGCIs)
                 self.variableSummaries(self.correctRate)
                 pass
             with tf.name_scope('falseAlarmed'):
-                self.falseAlarmedRate = tf.div(falseAlarm, nGCIS)
+                self.falseAlarmedRate = tf.div(falseAlarm, self.nGCIs)
                 self.variableSummaries(self.falseAlarmedRate)
                 pass
             pass
@@ -106,11 +119,17 @@ class ClassificationModel(DNNModel):
             trainingDataSet = InputReader(self.trainingDataFile, self.batchSize, self.timeStepSize)
             for i in range(self.trainIteration):
                 (batchX, batchY, batchMask, batchGCICount) = trainingDataSet.getBatch(i)
-                summary, _, trainingCost = sess.run([merged, self.optimizer, self.cost],
-                                                    feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
-                                                               self.gciCount: batchGCICount, self.keep_prob: 1.0})
+                summary, _, trainingCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainingNGCIs, estimatedGCICount= sess.run(
+                    [merged, self.optimizer, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.nGCIs, self.estimatedGCICount],
+                    feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
+                               self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
-                             + ", \tbatch loss= {:.6f}".format(trainingCost))
+                             + ", \tbatch loss= {:.9f}".format(trainingCost)
+                             + ", \tlarynx loss= {:.9f}".format(trainingLarynxCycleCost)
+                             + ", \tout of larynx loss= {:.9f}".format(trainingOutOfLarynxCycleCost)
+                             + ", \tnGCIs= {:.9f}".format(trainingNGCIs)
+                             + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
+                             )
                 logging.debug("batchX:" + str(batchX[0]))
                 logging.debug("batchY:" + str(batchY[0]))
                 # Add summary.
@@ -123,43 +142,59 @@ class ClassificationModel(DNNModel):
                     pass
                 # Display accuracy.
                 if (i + 1) % self.displayIteration == 0:
-                    trainCost, trainMissRate, trainCorrectRate, trainFalseAlarmedRate = sess.run(
-                        [self.cost, self.missRate, self.correctRate, self.falseAlarmedRate],
+                    trainCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainMissRate, trainCorrectRate, trainFalseAlarmedRate = sess.run(
+                        [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate, self.correctRate,
+                         self.falseAlarmedRate],
                         feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask, self.gciCount: batchGCICount,
                                    self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
-                                 + ", \tbatch loss= {:.6f}".format(trainCost)
-                                 + ", \t training correct rate= {:.6f}".format(trainCorrectRate)
-                                 + ", \t training miss rate= {:.6f}".format(trainMissRate)
-                                 + ", \t training false alarmed rate= {:.6f}".format(trainFalseAlarmedRate)
+                                 + ", \tbatch loss= {:.9f}".format(trainCost)
+                                 + ", \tlarynx loss= {:.9f}".format(trainingLarynxCycleCost)
+                                 + ", \tout of larynx loss= {:.9f}".format(trainingOutOfLarynxCycleCost)
+                                 + ", \t training correct rate= {:.9f}".format(trainCorrectRate)
+                                 + ", \t training miss rate= {:.9f}".format(trainMissRate)
+                                 + ", \t training false alarmed rate= {:.9f}".format(trainFalseAlarmedRate)
                                  )
                     pass
                 # Validate
                 if (trainingDataSet.completedEpoch > self.epoch):
                     validationDataSet = InputReader(self.validationDataFile, batchSize=1, maxTimeStep=self.timeStepSize)
                     validationIteration = validationDataSet.getBatchCount()
-                    validationCostSum  = 0.0
-                    validationMissRateSum  = 0.0
-                    validationCorrectRateSum  = 0.0
+                    validationCostSum = 0.0
+                    validationMissRateSum = 0.0
+                    validationCorrectRateSum = 0.0
                     validationFalseAlarmedRateSum = 0.0
                     for i in range(validationIteration):
-                        validationCost, validationMissRate, validationCorrectRate, validationFalseAlarmedRate = sess.run(
-                            [self.cost, self.missRate, self.correctRate, self.falseAlarmedRate],
+                        validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationMissRate, validationCorrectRate, validationFalseAlarmedRate = sess.run(
+                            [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate,
+                             self.correctRate, self.falseAlarmedRate],
                             feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
                                        self.gciCount: batchGCICount,
                                        self.keep_prob: 1.0})
+                        logging.info("Validation epoch:" + str(validationDataSet.completedEpoch)
+                                     + ", \tValidation iteration:" + str(i)
+                                     + ", \tloss= {:.9f}".format(validationCost)
+                                     + ", \tlarynx loss= {:.9f}".format(validationLarynxCycleCost)
+                                     + ", \tout of larynx loss= {:.9f}".format(validationOutOfLarynxCycleCost)
+                                     + ", \tcorrect rate= {:.9f}".format(validationCorrectRate)
+                                     + ", \tmiss rate= {:.9f}".format(validationMissRate)
+                                     + ", \tfalse alarmed rate= {:.9f}".format(validationFalseAlarmedRate)
+                                     )
                         validationCostSum += validationCost
                         validationMissRateSum += validationMissRate
                         validationCorrectRateSum += validationCorrectRate
-                        validationFalseAlarmedRateSum +=validationFalseAlarmedRate
+                        validationFalseAlarmedRateSum += validationFalseAlarmedRate
                         pass
                     logging.info("Epoch:" + str(validationDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
-                                 + ", \tmean loss= {:.6f}".format(validationCostSum / validationIteration)
-                                 + ", \tmean validation correct rate= {:.6f}".format(validationCorrectRateSum / validationIteration)
-                                 + ", \tmean validation miss rate= {:.6f}".format(validationMissRateSum / validationIteration)
-                                 + ", \tmean validation false alarmed rate= {:.6f}".format(validationFalseAlarmedRateSum / validationIteration)
+                                 + ", \tmean loss= {:.9f}".format(validationCostSum / validationIteration)
+                                 + ", \tmean validation correct rate= {:.9f}".format(
+                        validationCorrectRateSum / validationIteration)
+                                 + ", \tmean validation miss rate= {:.9f}".format(
+                        validationMissRateSum / validationIteration)
+                                 + ", \tmean validation false alarmed rate= {:.9f}".format(
+                        validationFalseAlarmedRateSum / validationIteration)
                                  )
                     # Update epoch.
                     self.epoch = trainingDataSet.completedEpoch
@@ -170,5 +205,47 @@ class ClassificationModel(DNNModel):
             logging.info("Optimization Finished!")
             pass
         pass
+
+
+    def test(self, samplingRate=20000):
+        #  Sampling rate
+        self.samplingRate = samplingRate
+        #  Set result file of result writer.
+        self.resultWriter.setResultFile(self.resultFile)
+        # Start a session and run up.
+        with tf.Session(config=self.config) as sess:
+            logging.info("Testing session started!")
+            '''Restore model.'''
+            if self.modelRestorePath is not None:
+                self.saver.restore(sess, self.modelRestorePath)
+                logging.info("Model restored from:"+str(self.modelRestorePath))
+            else:
+                logging.info("Model restore failed.")
+                return
+            '''Prepare testing parameters.'''
+            self.openTestingDataFile()
+            # Prepare data set.
+            testDataSet = InputReader(dataFile=self.testingDataFile, batchSize=1, maxTimeStep=self.timeStepSize)
+            # Test iteration.
+            testIteration = testDataSet.getBatchCount()
+            logging.info("Total testing iteration:" + str(testIteration))
+            logging.info("Testing starting!")
+            '''Forward testing data.'''
+            for i in range(testIteration):
+                (batchX, batchY, batchMask, batchGCICount) = testDataSet.getBatch(i)
+                results, testingCost = sess.run([self.results, self.cost], feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask, self.gciCount: batchGCICount, self.keep_prob: 1.0})
+                logging.info(", \tTesting iteration:" + str(i)
+                             + ", \tloss= {:.9f}".format(testingCost)
+                             )
+                logging.info("result:" + str(results))
+                # Save output
+                keyList = testDataSet.getBatchKeyList(i)
+                self.resultWriter.saveBatchResult(results, keyList)
+                pass
+            pass
+            self.closeTestingDataFile()
+        logging.info("Testing finished!")
+        pass
+
 
     pass
