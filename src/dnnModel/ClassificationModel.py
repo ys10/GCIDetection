@@ -91,7 +91,7 @@ class ClassificationModel(DNNModel):
             pass
         pass
 
-    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=20000):
+    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4):
         #  Total training iteration
         self.trainIteration = trainIteration
         #  After a fixed count of iteration, save output result of training.
@@ -100,8 +100,6 @@ class ClassificationModel(DNNModel):
         self.displayIteration = displayIteration
         #  Batch size
         self.batchSize = batchSize
-        #  Sampling rate
-        self.samplingRate = samplingRate
         #  Training epoch
         self.epoch = 0
         # Start a session and run up.
@@ -121,10 +119,10 @@ class ClassificationModel(DNNModel):
             trainingDataSet = InputReader(self.trainingDataFile, self.batchSize, self.timeStepSize)
             for i in range(self.trainIteration):
                 (batchX, batchY, batchMask, batchGCICount) = trainingDataSet.getBatch(i)
-                summary, _, trainingCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainingNGCIs, \
-                estimatedGCICount, missAndFalseCount, trainingResults = sess.run(
-                    [merged, self.update, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.nGCIs,
-                     self.estimatedGCICount, self.nonzero, self.results],
+                summary, _, trainingCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, \
+                trainingNGCIs, estimatedGCICount = sess.run(
+                    [merged, self.update, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost,
+                     self.nGCIs, self.estimatedGCICount],
                     feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
@@ -133,11 +131,11 @@ class ClassificationModel(DNNModel):
                              + ", \tout of larynx loss= {:.9f}".format(trainingOutOfLarynxCycleCost)
                              + ", \tnGCIs= {:.9f}".format(trainingNGCIs)
                              + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
-                             + ", \tmiss and false alarmed= {:.9f}".format(missAndFalseCount)
-                             + ", \tmissAndFalseCount = {:.9f}".format(missAndFalseCount)
+                             # + ", \tmiss and false alarmed= {:.9f}".format(missAndFalseCount)
+                             # + ", \tmissAndFalseCount = {:.9f}".format(missAndFalseCount)
                              )
-                logging.debug("batchX:" + str(batchX[0]))
-                logging.debug("batchY:" + str(batchY[0]))
+                # logging.debug("batchX:" + str(batchX[0]))
+                # logging.debug("batchY:" + str(batchY[0]))
                 #
                 # Add summary.
                 train_writer.add_summary(summary, global_step=i)
@@ -149,29 +147,31 @@ class ClassificationModel(DNNModel):
                     pass
                 # Display accuracy.
                 if (i + 1) % self.displayIteration == 0:
-                    trainCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainMissRate, trainCorrectRate, trainFalseAlarmedRate = sess.run(
-                        [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate, self.correctRate,
-                         self.falseAlarmedRate],
+                    trainCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, \
+                    trainingNGCIs, estimatedGCICount, trainingResults = sess.run(
+                        [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost,
+                         self.nGCIs, self.estimatedGCICount, self.results],
                         feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
-                                   self.gciCount: batchGCICount,
-                                   self.keep_prob: 1.0})
+                                   self.gciCount: batchGCICount, self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tbatch loss= {:.9f}".format(trainCost)
                                  + ", \tlarynx loss= {:.9f}".format(trainingLarynxCycleCost)
                                  + ", \tout of larynx loss= {:.9f}".format(trainingOutOfLarynxCycleCost)
-                                 + ", \t training correct rate= {:.9f}".format(trainCorrectRate)
-                                 + ", \t training miss rate= {:.9f}".format(trainMissRate)
-                                 + ", \t training false alarmed rate= {:.9f}".format(trainFalseAlarmedRate)
+                                 + ", \tnGCIs= {:.9f}".format(trainingNGCIs)
+                                 + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
+                                 # + ", \t training correct rate= {:.9f}".format(trainCorrectRate)
+                                 # + ", \t training miss rate= {:.9f}".format(trainMissRate)
+                                 # + ", \t training false alarmed rate= {:.9f}".format(trainFalseAlarmedRate)
                                  )
-                    resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
-                    locationsList = []
-                    for labelSeq in trainingResults:
-                        locations = resultWriter.transLabelSeq2Locations(labelSeq, samplingRate, frameSize=17,
-                                                                         frameStride=9)
-                        locationsList.append(locations)
-                        pass
-                    logging.debug("trainingResults:" + str(locationsList))
+                    '''Print location example'''
+                    # resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
+                    y = batchY[0]
+                    targets = trans2DLabelSeq2Locations(y, self.samplingRate, self.frameSize, self.frameStride)
+                    logging.info("trainingTargets:" + str(targets))
+                    labelSeq = trainingResults[0]
+                    locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
+                    logging.info("trainingResults:" + str(locations))
                     pass
                 # Validate
                 if (trainingDataSet.completedEpoch > self.epoch):
@@ -182,10 +182,9 @@ class ClassificationModel(DNNModel):
                     validationCorrectRateSum = 0.0
                     validationFalseAlarmedRateSum = 0.0
                     for i in range(validationIteration):
-                        validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationMissRate, validationCorrectRate, validationFalseAlarmedRate = sess.run(
-                            [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate,
-                             self.correctRate, self.falseAlarmedRate],
-                            feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
+                        (batchX, batchY, batchMask, batchGCICount) = validationDataSet.getBatch(i)
+                        validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationResults, validationNGCIs, estimatedGCICount = \
+                            sess.run([self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs, self.estimatedGCICount], feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                        self.gciCount: batchGCICount,
                                        self.keep_prob: 1.0})
                         logging.info("Validation epoch:" + str(validationDataSet.completedEpoch)
@@ -193,24 +192,35 @@ class ClassificationModel(DNNModel):
                                      + ", \tloss= {:.9f}".format(validationCost)
                                      + ", \tlarynx loss= {:.9f}".format(validationLarynxCycleCost)
                                      + ", \tout of larynx loss= {:.9f}".format(validationOutOfLarynxCycleCost)
-                                     + ", \tcorrect rate= {:.9f}".format(validationCorrectRate)
-                                     + ", \tmiss rate= {:.9f}".format(validationMissRate)
-                                     + ", \tfalse alarmed rate= {:.9f}".format(validationFalseAlarmedRate)
+                                     + ", \tnGCIs= {:.9f}".format(validationNGCIs)
+                                     + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
+                                     # + ", \tcorrect rate= {:.9f}".format(validationCorrectRate)
+                                     # + ", \tmiss rate= {:.9f}".format(validationMissRate)
+                                     # + ", \tfalse alarmed rate= {:.9f}".format(validationFalseAlarmedRate)
                                      )
+                        '''Print location example'''
+                        # resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
+                        y = batchY[0]
+                        targets = trans2DLabelSeq2Locations(y, self.samplingRate, self.frameSize, self.frameStride)
+                        logging.info("validationTargets:" + str(targets))
+                        labelSeq = validationResults[0]
+                        locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
+                        logging.info("validationResults:" + str(locations))
                         validationCostSum += validationCost
-                        validationMissRateSum += validationMissRate
-                        validationCorrectRateSum += validationCorrectRate
-                        validationFalseAlarmedRateSum += validationFalseAlarmedRate
+                    #     validationMissRateSum += validationMissRate
+                    #     validationCorrectRateSum += validationCorrectRate
+                    #     validationFalseAlarmedRateSum += validationFalseAlarmedRate
                         pass
+
                     logging.info("Epoch:" + str(validationDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tmean loss= {:.9f}".format(validationCostSum / validationIteration)
-                                 + ", \tmean validation correct rate= {:.9f}".format(
-                        validationCorrectRateSum / validationIteration)
-                                 + ", \tmean validation miss rate= {:.9f}".format(
-                        validationMissRateSum / validationIteration)
-                                 + ", \tmean validation false alarmed rate= {:.9f}".format(
-                        validationFalseAlarmedRateSum / validationIteration)
+                    #              + ", \tmean validation correct rate= {:.9f}".format(
+                    #     validationCorrectRateSum / validationIteration)
+                    #              + ", \tmean validation miss rate= {:.9f}".format(
+                    #     validationMissRateSum / validationIteration)
+                    #              + ", \tmean validation false alarmed rate= {:.9f}".format(
+                    #     validationFalseAlarmedRateSum / validationIteration)
                                  )
                     # Update epoch.
                     self.epoch = trainingDataSet.completedEpoch
@@ -223,9 +233,7 @@ class ClassificationModel(DNNModel):
             pass
         pass
 
-    def test(self, samplingRate=20000):
-        #  Sampling rate
-        self.samplingRate = samplingRate
+    def test(self):
         #  Set result file of result writer.
         self.resultWriter.setResultFile(self.resultFile)
         # Start a session and run up.
@@ -249,18 +257,25 @@ class ClassificationModel(DNNModel):
             '''Forward testing data.'''
             for i in range(testIteration):
                 (batchX, batchY, batchMask, batchGCICount) = testDataSet.getBatch(i)
-                results, estimatedGCICount, testingCost = sess.run([self.results, self.estimatedGCICount, self.cost],
+                testResults, testNGCIs, estimatedGCICount, testingCost = sess.run([self.results, self.nGCIs, self.estimatedGCICount, self.cost],
                                                                    feed_dict={self.x: batchX, self.y: batchY,
                                                                               self.maskMatrix: batchMask,
                                                                               self.gciCount: batchGCICount,
                                                                               self.keep_prob: 1.0})
                 logging.info(", \tTesting iteration:" + str(i)
                              + ", \tloss= {:.9f}".format(testingCost)
+                             + ", \tnGCIs= {:.9f}".format(testNGCIs)
+                             + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
                              )
-                logging.info("result:" + str(results))
+                y = batchY[0]
+                targets = trans2DLabelSeq2Locations(y, self.samplingRate, self.frameSize, self.frameStride)
+                logging.info("testTargets:" + str(targets))
+                labelSeq = testResults[0]
+                locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
+                logging.info("testResults:" + str(locations))
                 '''Save output'''
                 keyList = testDataSet.getBatchKeyList(i)
-                self.resultWriter.saveBatchResult(results, keyList)
+                self.resultWriter.saveBatchResult(testResults, keyList)
                 pass
             pass
             self.closeTestingDataFile()

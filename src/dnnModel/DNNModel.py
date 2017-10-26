@@ -162,6 +162,12 @@ class DNNModel(object):
         self.resultFile.close()
         pass
 
+    def setDataFileInfo(self, samplingRate=20000, frameSize=9, frameStride=9):
+        self.samplingRate = samplingRate
+        self.frameSize = frameSize
+        self.frameStride = frameStride
+        pass
+
     def variableSummaries(self, var):
         var = tf.cast(var, dtype=tf.float32)
         with tf.name_scope('summaries'):
@@ -175,7 +181,7 @@ class DNNModel(object):
             pass
         pass
 
-    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4, samplingRate=20000):
+    def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4):
         #  Total training iteration
         self.trainIteration = trainIteration
         #  After a fixed count of iteration, save output result of training.
@@ -184,8 +190,6 @@ class DNNModel(object):
         self.displayIteration = displayIteration
         #  Batch size
         self.batchSize = batchSize
-        #  Sampling rate
-        self.samplingRate = samplingRate
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
@@ -238,9 +242,7 @@ class DNNModel(object):
             pass
         pass
 
-    def test(self, samplingRate=20000):
-        #  Sampling rate
-        self.samplingRate = samplingRate
+    def test(self):
         #  Set result file of result writer.
         self.resultWriter.setResultFile(self.resultFile)
         # Start a session and run up.
