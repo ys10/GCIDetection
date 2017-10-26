@@ -42,7 +42,7 @@ class ClassificationModel(DNNModel):
             with tf.name_scope('difference'):
                 self.difference = tf.subtract(self.logits, self.y)
             with tf.name_scope('costDistribute'):
-                self.costDistribute = 10.0 * tf.matmul(self.maskMatrix, self.difference)
+                self.costDistribute = tf.matmul(self.maskMatrix, self.difference)
                 # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
             with tf.name_scope('larynxCycleCost'):
                 self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
@@ -50,14 +50,14 @@ class ClassificationModel(DNNModel):
                 pass
             with tf.name_scope('outOfLarynxCycleCost'):
                 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.linearOutput)
-                self.outOfLarynxCycleCost = tf.reduce_sum(cross_entropy)
+                self.outOfLarynxCycleCost = tf.reduce_mean(cross_entropy)
                 self.variableSummaries(self.outOfLarynxCycleCost)
                 pass
             with tf.name_scope('cost'):
                 # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
                 # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
                 self.cost = self.outOfLarynxCycleCost
-                self.cost = self.larynxCycleCost + self.outOfLarynxCycleCost
+                # self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
                 self.variableSummaries(self.cost)
                 pass
             pass
@@ -107,7 +107,6 @@ class ClassificationModel(DNNModel):
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
-            logging.debug("self.markedResult.shape"+str(tf.shape(self.markedResult)))
             sess.run(tf.global_variables_initializer())
             '''Restore model.'''
             if self.modelRestorePath is not None:
@@ -137,15 +136,9 @@ class ClassificationModel(DNNModel):
                              + ", \tmiss and false alarmed= {:.9f}".format(missAndFalseCount)
                              + ", \tmissAndFalseCount = {:.9f}".format(missAndFalseCount)
                              )
-                # logging.debug("batchX:" + str(batchX[0]))
-                # logging.debug("batchY:" + str(batchY[0]))
-                resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
-                locationsList =[]
-                for labelSeq in trainingResults:
-                    locations = resultWriter.transLabelSeq2Locations(labelSeq, samplingRate, frameSize=17, frameStride=9)
-                    locationsList.append(locations)
-                    pass
-                logging.debug("trainingResults:" + str(locationsList))
+                logging.debug("batchX:" + str(batchX[0]))
+                logging.debug("batchY:" + str(batchY[0]))
+                #
                 # Add summary.
                 train_writer.add_summary(summary, global_step=i)
                 # Save output result.
@@ -171,6 +164,14 @@ class ClassificationModel(DNNModel):
                                  + ", \t training miss rate= {:.9f}".format(trainMissRate)
                                  + ", \t training false alarmed rate= {:.9f}".format(trainFalseAlarmedRate)
                                  )
+                    resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
+                    locationsList = []
+                    for labelSeq in trainingResults:
+                        locations = resultWriter.transLabelSeq2Locations(labelSeq, samplingRate, frameSize=17,
+                                                                         frameStride=9)
+                        locationsList.append(locations)
+                        pass
+                    logging.debug("trainingResults:" + str(locationsList))
                     pass
                 # Validate
                 if (trainingDataSet.completedEpoch > self.epoch):

@@ -15,7 +15,7 @@ class TrainFrame17ClassificationModel(object):
         self.model.setTrainingDataFilename(self.trainingDataFilename, self.validationFilename)
         self.model.setModelSavePath(self.modelRestorePath, self.modelSavePath)
         self.model.setSummarySavePath(self.summarySavePath)
-        self.model.train(trainIteration=100, saveIteration=2, displayIteration=1, batchSize=16, samplingRate=20000)
+        self.model.train(trainIteration=100, saveIteration=2, displayIteration=1, batchSize=1, samplingRate=20000)
         pass
 
     pass

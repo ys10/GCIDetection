@@ -1,5 +1,5 @@
 import tensorflow.contrib.rnn as rnn
-
+from dnnModel.DNNModel import *
 
 class RegressionModel(DNNModel):
     def __DNNModel(self):

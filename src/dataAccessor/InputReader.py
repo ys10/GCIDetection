@@ -52,11 +52,11 @@ class InputReader(object):
         keyList = self.keyList[startKeyIndex:endKeyIndex]
         return keyList
 
-    def getMaskMatrix(self, sentenceY, defaultRadius=40):
+    def getMaskMatrix(self, sentenceY, defaultRadius=1):
         maskMatrix = transSentenceY2MaskMatrix(sentenceY, defaultRadius)
         return maskMatrix
 
-    def getMaskVector(self, sentenceY, defaultRadius=40):
+    def getMaskVector(self, sentenceY, defaultRadius=1):
         maskVector = transSentenceY2MaskVector(sentenceY, defaultRadius)
         return maskVector
 

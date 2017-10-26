@@ -34,3 +34,23 @@ class ResultWriter(object):
         return locations
 
     pass
+
+
+def trans2DLabelSeq2Locations(labelSeq, samplingRate, frameSize, frameStride):
+    locations = list()
+    labelLocations = np.where(np.array(labelSeq)[:, 0] == 1)[0].tolist()
+    for labelLocation in labelLocations:
+        location =(labelLocation * frameStride + frameSize / 2)/ samplingRate
+        locations.append(location)
+        pass
+    return locations
+
+# Transform label(binary classification) sequence (timeSteps, 2) to GCI locations
+def trans1DLabelSeq2Locations(labelSeq, samplingRate=20000, frameSize=17, frameStride=9):
+    locations = list()
+    labelLocations = list(np.where(np.array(labelSeq)[:] == 1))
+    for labelLocation in labelLocations:
+        location =(labelLocation * frameStride + frameSize / 2)/ samplingRate
+        locations.append(location)
+        pass
+    return locations

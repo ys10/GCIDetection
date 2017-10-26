@@ -12,7 +12,7 @@ log_file_name = "log/dataProcess.log"
 if not os.path.exists(log_file_name):
     f = open(log_file_name, 'w')
     f.close()
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename=log_file_name,
@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 ''' Output to the console.'''
 console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
+console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
@@ -29,7 +29,7 @@ logging.getLogger('').addHandler(console)
 class DataPreprocessor(object):
     def __init__(self, dataFilePath, frameSize=1, frameStride=1, waveDirPath="data/wav/", waveExtension=".wav",
                  markDirPath="data/mark/",
-                 markExtension=".mark"):
+                 markExtension=".marks"):
         self.dataFilePath = dataFilePath
         self.frameSize = frameSize
         self.frameStride = frameStride
@@ -79,9 +79,8 @@ class DataPreprocessor(object):
         count = int(ceil((dataLength - self.frameSize) / self.frameStride)) + 1
         return count
 
-    def getLabelIndex(self, location, samplingRate, framedLength):
-        frameCount = self.getFrameCount(framedLength)
-        if (location * samplingRate >= self.frameStride * frameCount):
+    def getLabelIndex(self, location, samplingRate, frameCount):
+        if (location * samplingRate  >= self.frameStride * frameCount):
             labelIndex = frameCount-1
             pass
         else:
