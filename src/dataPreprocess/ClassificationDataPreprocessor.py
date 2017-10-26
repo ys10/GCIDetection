@@ -20,7 +20,7 @@ class ClassificationDataPreprocessor(DataPreprocessor):
             labelSeq[labelIndex][0] = 1.0
             labelSeq[labelIndex][1] = 0.0
             pass
-        testLabelSeq = trans1DLabelSeq2Locations(labelSeq.transpose()[0])
+        testLabelSeq = trans1DLabelSeq2Locations(labelSeq.transpose()[0], samplingRate, self.frameSize, self.frameStride)
         logging.info("labelSeq:" + str(testLabelSeq))
         return labelSeq
 

@@ -46,7 +46,7 @@ def trans2DLabelSeq2Locations(labelSeq, samplingRate, frameSize, frameStride):
     return locations
 
 # Transform label(binary classification) sequence (timeSteps, 2) to GCI locations
-def trans1DLabelSeq2Locations(labelSeq, samplingRate=20000, frameSize=17, frameStride=9):
+def trans1DLabelSeq2Locations(labelSeq, samplingRate=20000, frameSize=9, frameStride=9):
     locations = list()
     labelLocations = list(np.where(np.array(labelSeq)[:] == 1))
     for labelLocation in labelLocations:
