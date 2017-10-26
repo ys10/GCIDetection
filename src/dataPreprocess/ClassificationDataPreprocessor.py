@@ -1,4 +1,5 @@
-from src import *
+from dataPreprocess.DataPreprocessor import *
+import numpy
 # from resultEvaluation.GCI import *
 
 

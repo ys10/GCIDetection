@@ -5,14 +5,14 @@ import h5py
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
 
-from src import InputReader
+from dataAccessor.InputReader import *
 
 ''' Config the logger, output into log file.'''
 log_file_name = "log/model.log"
 if not os.path.exists(log_file_name):
     f = open(log_file_name, 'w')
     f.close()
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename=log_file_name,
@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO,
 
 ''' Output to the console.'''
 console = logging.StreamHandler()
-console.setLevel(logging.INFO)
+console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
@@ -46,7 +46,7 @@ class DNNModel(object):
         with tf.name_scope('PlaceHolder'):
             self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])# X shape: (batchSize, timeSteps, inputSize)
             self.y = tf.placeholder(tf.float32, [None, None, self.outputSize])# Y shape: (batchSize, timeSteps, outputSize)
-            self.mask = tf.placeholder(tf.float32, [None, None, None]) # Mask shape: (batchSize, timeSteps(nGCIs), timeSteps)
+            self.maskMatrix = tf.placeholder(tf.float32, [None, None, None]) # Mask shape: (batchSize, timeSteps(nGCIs), timeSteps)
             self.maskVector = tf.placeholder(tf.float32, [None, None]) # Mask shape: (batchSize, timeSteps)
             self.gciCount = tf.placeholder(tf.float32, [None, None])  # GCI count shape: (batchSize, 1)
             self.keep_prob = tf.placeholder(tf.float32)

@@ -1,4 +1,6 @@
-import tensorflow.contrib.rnn as rnn
+# import tensorflow.contrib.rnn as rnn
+from dnnModel.DNNModel import *
+from dataAccessor.ResultWriter import *
 
 
 class ClassificationModel(DNNModel):
@@ -32,7 +34,6 @@ class ClassificationModel(DNNModel):
                 self.results = tf.argmin(self.logits, 2)
                 self.estimatedGCICount = tf.reduce_sum(self.results)
                 pass
-            # self.cost = tf.reduce_sum(tf.square(tf.cast(self.logits, dtype=tf.float32) - self.y))
             pass
         pass
 
@@ -41,7 +42,7 @@ class ClassificationModel(DNNModel):
             with tf.name_scope('difference'):
                 self.difference = tf.subtract(self.logits, self.y)
             with tf.name_scope('costDistribute'):
-                self.costDistribute = tf.matmul(self.mask, self.difference)
+                self.costDistribute = 10.0 * tf.matmul(self.maskMatrix, self.difference)
                 # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
             with tf.name_scope('larynxCycleCost'):
                 self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
@@ -56,7 +57,7 @@ class ClassificationModel(DNNModel):
                 # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
                 # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
                 self.cost = self.outOfLarynxCycleCost
-                self.cost = 1e6 * self.larynxCycleCost + self.outOfLarynxCycleCost
+                self.cost = self.larynxCycleCost + self.outOfLarynxCycleCost
                 self.variableSummaries(self.cost)
                 pass
             pass
@@ -67,10 +68,10 @@ class ClassificationModel(DNNModel):
             difference = tf.cast(tf.subtract(tf.argmin(self.logits, 2), tf.argmin(self.y, 2)), tf.float32)
             diffShape = tf.shape(difference)  # (BatchSize, timeSteps)
             difference = tf.reshape(difference, shape=[diffShape[0], diffShape[1], 1])  # (BatchSize, timeSteps, 1)
-            markedResult = tf.matmul(self.mask, difference)  # Shape: (BatchSIze, timeSteps, 1)
+            self.markedResult = tf.matmul(self.maskMatrix, difference)  # Shape: (BatchSIze, timeSteps, 1)
             #
-            self.nonzero = tf.cast(tf.count_nonzero(markedResult), dtype=tf.float32)
-            falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(markedResult)), dtype=tf.float32)
+            self.nonzero = tf.cast(tf.count_nonzero(self.markedResult), dtype=tf.float32)
+            falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(self.markedResult)), dtype=tf.float32)
             self.nGCIs = tf.cast(tf.reduce_sum(self.gciCount), dtype=tf.float32)
             correct = self.nonzero
             miss = self.nGCIs - correct - falseAlarm
@@ -106,6 +107,7 @@ class ClassificationModel(DNNModel):
         # Start a session and run up.
         with tf.Session(config=self.config) as sess:
             logging.info("Training session started!")
+            logging.debug("self.markedResult.shape"+str(tf.shape(self.markedResult)))
             sess.run(tf.global_variables_initializer())
             '''Restore model.'''
             if self.modelRestorePath is not None:
@@ -120,9 +122,11 @@ class ClassificationModel(DNNModel):
             trainingDataSet = InputReader(self.trainingDataFile, self.batchSize, self.timeStepSize)
             for i in range(self.trainIteration):
                 (batchX, batchY, batchMask, batchGCICount) = trainingDataSet.getBatch(i)
-                summary, _, trainingCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainingNGCIs, estimatedGCICount, missAndFalseCount= sess.run(
-                    [merged, self.update, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.nGCIs, self.estimatedGCICount, self.nonzero],
-                    feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
+                summary, _, trainingCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainingNGCIs, \
+                estimatedGCICount, missAndFalseCount, trainingResults = sess.run(
+                    [merged, self.update, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.nGCIs,
+                     self.estimatedGCICount, self.nonzero, self.results],
+                    feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
                              + ", \tbatch loss= {:.9f}".format(trainingCost)
@@ -131,9 +135,17 @@ class ClassificationModel(DNNModel):
                              + ", \tnGCIs= {:.9f}".format(trainingNGCIs)
                              + ", \testimated nGCIs= {:.9f}".format(estimatedGCICount)
                              + ", \tmiss and false alarmed= {:.9f}".format(missAndFalseCount)
+                             + ", \tmissAndFalseCount = {:.9f}".format(missAndFalseCount)
                              )
-                logging.debug("batchX:" + str(batchX[0]))
-                logging.debug("batchY:" + str(batchY[0]))
+                # logging.debug("batchX:" + str(batchX[0]))
+                # logging.debug("batchY:" + str(batchY[0]))
+                resultWriter = ResultWriter(samplingRate, frameSize=17, frameStride=9)
+                locationsList =[]
+                for labelSeq in trainingResults:
+                    locations = resultWriter.transLabelSeq2Locations(labelSeq, samplingRate, frameSize=17, frameStride=9)
+                    locationsList.append(locations)
+                    pass
+                logging.debug("trainingResults:" + str(locationsList))
                 # Add summary.
                 train_writer.add_summary(summary, global_step=i)
                 # Save output result.
@@ -147,7 +159,8 @@ class ClassificationModel(DNNModel):
                     trainCost, trainingLarynxCycleCost, trainingOutOfLarynxCycleCost, trainMissRate, trainCorrectRate, trainFalseAlarmedRate = sess.run(
                         [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate, self.correctRate,
                          self.falseAlarmedRate],
-                        feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask, self.gciCount: batchGCICount,
+                        feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
+                                   self.gciCount: batchGCICount,
                                    self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
@@ -171,7 +184,7 @@ class ClassificationModel(DNNModel):
                         validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationMissRate, validationCorrectRate, validationFalseAlarmedRate = sess.run(
                             [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.missRate,
                              self.correctRate, self.falseAlarmedRate],
-                            feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask,
+                            feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                        self.gciCount: batchGCICount,
                                        self.keep_prob: 1.0})
                         logging.info("Validation epoch:" + str(validationDataSet.completedEpoch)
@@ -209,7 +222,6 @@ class ClassificationModel(DNNModel):
             pass
         pass
 
-
     def test(self, samplingRate=20000):
         #  Sampling rate
         self.samplingRate = samplingRate
@@ -221,7 +233,7 @@ class ClassificationModel(DNNModel):
             '''Restore model.'''
             if self.modelRestorePath is not None:
                 self.saver.restore(sess, self.modelRestorePath)
-                logging.info("Model restored from:"+str(self.modelRestorePath))
+                logging.info("Model restored from:" + str(self.modelRestorePath))
             else:
                 logging.info("Model restore failed.")
                 return
@@ -236,7 +248,11 @@ class ClassificationModel(DNNModel):
             '''Forward testing data.'''
             for i in range(testIteration):
                 (batchX, batchY, batchMask, batchGCICount) = testDataSet.getBatch(i)
-                results, estimatedGCICount, testingCost = sess.run([self.results, self.estimatedGCICount, self.cost], feed_dict={self.x: batchX, self.y: batchY, self.mask: batchMask, self.gciCount: batchGCICount, self.keep_prob: 1.0})
+                results, estimatedGCICount, testingCost = sess.run([self.results, self.estimatedGCICount, self.cost],
+                                                                   feed_dict={self.x: batchX, self.y: batchY,
+                                                                              self.maskMatrix: batchMask,
+                                                                              self.gciCount: batchGCICount,
+                                                                              self.keep_prob: 1.0})
                 logging.info(", \tTesting iteration:" + str(i)
                              + ", \tloss= {:.9f}".format(testingCost)
                              )
@@ -249,6 +265,5 @@ class ClassificationModel(DNNModel):
             self.closeTestingDataFile()
         logging.info("Testing finished!")
         pass
-
 
     pass

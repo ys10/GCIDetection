@@ -1,3 +1,5 @@
+from  dnnModel.ClassificationModel import *
+
 class TrainFrame17ClassificationModel(object):
     def __init__(self):
         self.model = ClassificationModel(inputSize=17, timeStepSize=None, hiddenSize=256, layerNum=2, outputSize=2, classNum=2,

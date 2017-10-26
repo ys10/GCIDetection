@@ -128,8 +128,21 @@ def transSentenceY2MaskMatrix(sentenceY, defaultRadius=5):
 def transGCIList2GCIMaskMatrix(gciList, timeSteps):
     maskMatrix = np.zeros(shape=(gciList.__len__(), timeSteps), dtype=np.short)
     for i in range(gciList.__len__()):
-        maskStart = int(gciList[i].getBorderLeft())
+        maskBegin = int(gciList[i].getBorderLeft())
         maskEnd = int(gciList[i].getBorderRight())
-        maskMatrix[i][maskStart:maskEnd] = 1
+        maskMatrix[i][maskBegin:maskEnd] = 1
         pass
     return list(maskMatrix)
+
+def transSentenceY2MaskVector(sentenceY, defaultRadius):
+    frameCount = len(sentenceY)
+    shape = np.shape(sentenceY)
+    reference = np.reshape(sentenceY, newshape=(shape[1], shape[0]))[0]
+    gciList = transRef2GCIList(reference, defaultRadius)
+    maskVector = np.zeros(shape=(frameCount,), dtype=np.short)
+    for i in range(gciList.__len__()):
+        maskBegin = int(gciList[i].getBorderLeft())
+        maskEnd = int(gciList[i].getBorderRight())
+        maskVector[maskBegin:maskEnd] = 1
+        pass
+    return maskVector
