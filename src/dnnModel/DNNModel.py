@@ -46,8 +46,8 @@ class DNNModel(object):
         with tf.name_scope('PlaceHolder'):
             self.x = tf.placeholder(tf.float32, [None, None, self.inputSize])# X shape: (batchSize, timeSteps, inputSize)
             self.y = tf.placeholder(tf.float32, [None, None, self.outputSize])# Y shape: (batchSize, timeSteps, outputSize)
-            self.maskMatrix = tf.placeholder(tf.float32, [None, None, None]) # Mask shape: (batchSize, timeSteps(nGCIs), timeSteps)
-            self.maskVector = tf.placeholder(tf.float32, [None, None]) # Mask shape: (batchSize, timeSteps)
+            # self.maskMatrix = tf.placeholder(tf.float32, [None, None, None]) # Mask shape: (batchSize, timeSteps(nGCIs), timeSteps)
+            self.maskVector = tf.placeholder(tf.bool, [None, None]) # Mask shape: (batchSize, timeSteps)
             self.gciCount = tf.placeholder(tf.float32, [None, None])  # GCI count shape: (batchSize, 1)
             self.keep_prob = tf.placeholder(tf.float32)
             pass

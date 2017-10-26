@@ -5,7 +5,7 @@ class TrainFrame9ClassificationModel(object):
         self.model = ClassificationModel(inputSize=9, timeStepSize=None, hiddenSize=256, layerNum=2, outputSize=2, classNum=2,
                                          learningRate=2e-3)
         self.trainingDataFilename = "data/hdf5/APLAWDW_frame_9_classification_training.hdf5"
-        self.validationFilename = "data/hdf5/APLAWDW_frame_9_classification__validation.hdf5"
+        self.validationFilename = "data/hdf5/APLAWDW_frame_9_classification_validation.hdf5"
         self.modelRestorePath = None
         self.modelSavePath = "model/APLAWDW_frame_9_classification_model"
         self.summarySavePath = "summary/APLAWDW_frame_9_classification_model/"

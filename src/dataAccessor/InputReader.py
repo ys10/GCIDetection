@@ -34,16 +34,16 @@ class InputReader(object):
             gciCount = self.dataFile[self.keyList[j] + "/gciCount"]
             batchX.append(sentenceX)
             batchY.append(sentenceY)
-            maskMatrix = self.getMaskMatrix(sentenceY)
-            batchMask.append(maskMatrix)
-            # maskVector = self.getMaskVector(sentenceY)
-            # batchMask.append(maskVector)
+            # maskMatrix = self.getMaskMatrix(sentenceY)
+            # batchMask.append(maskMatrix)
+            maskVector = self.getMaskVector(sentenceY)
+            batchMask.append(maskVector)
             batchGCICount.append(gciCount)
             pass
         batchX, _ = pad_sequences(batchX, maxlen=self.maxTimeStep)
         batchY, _ = pad_sequences(batchY, maxlen=self.maxTimeStep)
-        # batchMask, _ = pad_sequences(batchMask, maxlen=self.maxTimeStep)
-        batchMask = pad_matrices_dim1(pad_matrices_dim2(batchMask, maxlen=self.maxTimeStep))
+        batchMask, _ = pad_sequences(batchMask, maxlen=self.maxTimeStep)
+        # batchMask = pad_matrices_dim1(pad_matrices_dim2(batchMask, maxlen=self.maxTimeStep))
         return (batchX, batchY, batchMask, batchGCICount)
 
     def getBatchKeyList(self, batchIndex):
