@@ -1,3 +1,5 @@
+from resultEvaluation.GCI import *
+
 class ResultEvaluator(object):
     def __init__(self, referenceFile, estimateFile, defaultRadius=5):
         self.referenceFile = referenceFile

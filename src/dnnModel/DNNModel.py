@@ -73,7 +73,8 @@ class DNNModel(object):
         self.modelSavePath = 'model/'
         ''' GPU  setting'''
         self.config = tf.ConfigProto()
-        self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
+        self.config.gpu_options.allow_growth = True
+        # self.config.gpu_options.per_process_gpu_memory_fraction = 0.8
         pass
 
     def DNNModel(self):

@@ -56,8 +56,8 @@ class ClassificationModel(DNNModel):
             with tf.name_scope('cost'):
                 # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
                 # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
-                self.cost = self.outOfLarynxCycleCost
-                # self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
+                # self.cost = self.outOfLarynxCycleCost
+                self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
                 self.variableSummaries(self.cost)
                 pass
             pass
@@ -218,6 +218,10 @@ class ClassificationModel(DNNModel):
                     labelSeq = trainingResults[0]
                     locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
                     logging.info("trainingResults:" + str(locations))
+                    del(batchX)
+                    del (batchY)
+                    del(batchMask)
+                    del(batchGCICount)
                     pass
                 # Validate
                 if (trainingDataSet.completedEpoch > self.epoch):
@@ -257,6 +261,10 @@ class ClassificationModel(DNNModel):
                     #     validationMissRateSum += validationMissRate
                     #     validationCorrectRateSum += validationCorrectRate
                     #     validationFalseAlarmedRateSum += validationFalseAlarmedRate
+                        del (batchX)
+                        del (batchY)
+                        del (batchMask)
+                        del (batchGCICount)
                         pass
 
                     logging.info("Epoch:" + str(validationDataSet.completedEpoch)
