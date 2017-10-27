@@ -37,105 +37,105 @@ class ClassificationModel(DNNModel):
             pass
         pass
 
-    # def lossFunction(self):
-    #     with tf.name_scope('LossFunction'):
-    #         with tf.name_scope('difference'):
-    #             self.difference = tf.subtract(self.logits, self.y)
-    #         with tf.name_scope('costDistribute'):
-    #             self.costDistribute = tf.matmul(self.maskMatrix, self.difference)
-    #             # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
-    #         with tf.name_scope('larynxCycleCost'):
-    #             self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
-    #             self.variableSummaries(self.larynxCycleCost)
-    #             pass
-    #         with tf.name_scope('outOfLarynxCycleCost'):
-    #             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.linearOutput)
-    #             self.outOfLarynxCycleCost = tf.reduce_mean(cross_entropy)
-    #             self.variableSummaries(self.outOfLarynxCycleCost)
-    #             pass
-    #         with tf.name_scope('cost'):
-    #             # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
-    #             # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
-    #             self.cost = self.outOfLarynxCycleCost
-    #             # self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
-    #             self.variableSummaries(self.cost)
-    #             pass
-    #         pass
-    #     pass
-
-
     def lossFunction(self):
         with tf.name_scope('LossFunction'):
-            with tf.name_scope('mask'):
-                with tf.name_scope('maskedLabels'):
-                    self.maskedLabels = tf.boolean_mask(self.y, self.maskVector)
-                    self.variableSummaries(self.maskedLabels)
-                    pass
-                with tf.name_scope('maskedLogits'):
-                    self.maskedLogits = tf.boolean_mask(self.logits, self.maskVector)
-                    self.variableSummaries(self.maskedLogits)
-                    pass
-                pass
-            with tf.name_scope('larynxCost'):
-                cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.maskedLabels,
-                                                                        logits=self.maskedLogits)
-                self.larynxCycleCost = tf.reduce_mean(cross_entropy)
+            with tf.name_scope('difference'):
+                self.difference = tf.subtract(self.logits, self.y)
+            with tf.name_scope('costDistribute'):
+                self.costDistribute = tf.matmul(self.maskMatrix, self.difference)
+                # self.costDistribute = tf.boolean_mask( self.difference, self.mask)
+            with tf.name_scope('larynxCycleCost'):
+                self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
                 self.variableSummaries(self.larynxCycleCost)
                 pass
             with tf.name_scope('outOfLarynxCycleCost'):
-                cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.logits)
+                cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.linearOutput)
                 self.outOfLarynxCycleCost = tf.reduce_mean(cross_entropy)
                 self.variableSummaries(self.outOfLarynxCycleCost)
                 pass
             with tf.name_scope('cost'):
+                # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
+                # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
                 self.cost = self.outOfLarynxCycleCost
+                # self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
                 self.variableSummaries(self.cost)
                 pass
             pass
         pass
 
 
-    def evaluator(self):
-        with tf.name_scope('Evaluator'):
-            self.nGCIs = tf.cast(tf.reduce_sum(self.gciCount), dtype=tf.float32)
-            with tf.name_scope('wave_Evaluator'):
-                self.wave_correct_pred = tf.equal(tf.argmin(self.logits, 2), tf.argmin(self.y, 2))
-                self.wave_accuracy = tf.reduce_mean(tf.cast(self.wave_correct_pred, tf.float32))
-                self.variableSummaries(self.wave_accuracy)
-            with tf.name_scope('gci_Evaluator'):
-                self.gci_correct_pred = tf.equal(tf.argmin(self.maskedLogits), tf.argmin(self.maskedLabels))
-                self.gci_accuracy = tf.reduce_mean(tf.cast(self.gci_correct_pred, tf.float32))
-                self.variableSummaries(self.gci_accuracy)
-            pass
-        pass
-
-    # def evaluator(self):
-    #     with tf.name_scope('Evaluator'):
-    #         difference = tf.cast(tf.subtract(tf.argmin(self.logits, 2), tf.argmin(self.y, 2)), tf.float32)
-    #         diffShape = tf.shape(difference)  # (BatchSize, timeSteps)
-    #         difference = tf.reshape(difference, shape=[diffShape[0], diffShape[1], 1])  # (BatchSize, timeSteps, 1)
-    #         self.markedResult = tf.matmul(self.maskMatrix, difference)  # Shape: (BatchSIze, timeSteps, 1)
-    #         #
-    #         self.nonzero = tf.cast(tf.count_nonzero(self.markedResult), dtype=tf.float32)
-    #         falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(self.markedResult)), dtype=tf.float32)
-    #         self.nGCIs = tf.cast(tf.reduce_sum(self.gciCount), dtype=tf.float32)
-    #         correct = self.nonzero
-    #         miss = self.nGCIs - correct - falseAlarm
-    #         # falseAlarm = tf.subtract(nonzero, miss)
-    #         with tf.name_scope('miss'):
-    #             self.missRate = tf.div(miss, self.nGCIs)
-    #             self.variableSummaries(self.missRate)
+    # def lossFunction(self):
+    #     with tf.name_scope('LossFunction'):
+    #         with tf.name_scope('mask'):
+    #             with tf.name_scope('maskedLabels'):
+    #                 self.maskedLabels = tf.boolean_mask(self.y, self.maskVector)
+    #                 self.variableSummaries(self.maskedLabels)
+    #                 pass
+    #             with tf.name_scope('maskedLogits'):
+    #                 self.maskedLogits = tf.boolean_mask(self.logits, self.maskVector)
+    #                 self.variableSummaries(self.maskedLogits)
+    #                 pass
     #             pass
-    #         with tf.name_scope('correctRate'):
-    #             self.correctRate = tf.div(correct, self.nGCIs)
-    #             self.variableSummaries(self.correctRate)
+    #         with tf.name_scope('larynxCost'):
+    #             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.maskedLabels,
+    #                                                                     logits=self.maskedLogits)
+    #             self.larynxCycleCost = tf.reduce_mean(cross_entropy)
+    #             self.variableSummaries(self.larynxCycleCost)
     #             pass
-    #         with tf.name_scope('falseAlarmed'):
-    #             self.falseAlarmedRate = tf.div(falseAlarm, self.nGCIs)
-    #             self.variableSummaries(self.falseAlarmedRate)
+    #         with tf.name_scope('outOfLarynxCycleCost'):
+    #             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.logits)
+    #             self.outOfLarynxCycleCost = tf.reduce_mean(cross_entropy)
+    #             self.variableSummaries(self.outOfLarynxCycleCost)
+    #             pass
+    #         with tf.name_scope('cost'):
+    #             self.cost = self.outOfLarynxCycleCost
+    #             self.variableSummaries(self.cost)
     #             pass
     #         pass
     #     pass
+
+
+    # def evaluator(self):
+    #     with tf.name_scope('Evaluator'):
+    #         self.nGCIs = tf.cast(tf.reduce_sum(self.gciCount), dtype=tf.float32)
+    #         with tf.name_scope('wave_Evaluator'):
+    #             self.wave_correct_pred = tf.equal(tf.argmin(self.logits, 2), tf.argmin(self.y, 2))
+    #             self.wave_accuracy = tf.reduce_mean(tf.cast(self.wave_correct_pred, tf.float32))
+    #             self.variableSummaries(self.wave_accuracy)
+    #         with tf.name_scope('gci_Evaluator'):
+    #             self.gci_correct_pred = tf.equal(tf.argmin(self.maskedLogits), tf.argmin(self.maskedLabels))
+    #             self.gci_accuracy = tf.reduce_mean(tf.cast(self.gci_correct_pred, tf.float32))
+    #             self.variableSummaries(self.gci_accuracy)
+    #         pass
+    #     pass
+
+    def evaluator(self):
+        with tf.name_scope('Evaluator'):
+            difference = tf.cast(tf.subtract(tf.argmin(self.logits, 2), tf.argmin(self.y, 2)), tf.float32)
+            diffShape = tf.shape(difference)  # (BatchSize, timeSteps)
+            difference = tf.reshape(difference, shape=[diffShape[0], diffShape[1], 1])  # (BatchSize, timeSteps, 1)
+            self.markedResult = tf.matmul(self.maskMatrix, difference)  # Shape: (BatchSIze, timeSteps, 1)
+            #
+            self.nonzero = tf.cast(tf.count_nonzero(self.markedResult), dtype=tf.float32)
+            falseAlarm = tf.cast(tf.count_nonzero(tf.nn.relu(self.markedResult)), dtype=tf.float32)
+            self.nGCIs = tf.cast(tf.reduce_sum(self.gciCount), dtype=tf.float32)
+            correct = self.nonzero
+            miss = self.nGCIs - correct - falseAlarm
+            # falseAlarm = tf.subtract(nonzero, miss)
+            with tf.name_scope('miss'):
+                self.missRate = tf.div(miss, self.nGCIs)
+                self.variableSummaries(self.missRate)
+                pass
+            with tf.name_scope('correctRate'):
+                self.correctRate = tf.div(correct, self.nGCIs)
+                self.variableSummaries(self.correctRate)
+                pass
+            with tf.name_scope('falseAlarmed'):
+                self.falseAlarmedRate = tf.div(falseAlarm, self.nGCIs)
+                self.variableSummaries(self.falseAlarmedRate)
+                pass
+            pass
+        pass
 
     def train(self, trainIteration=10000, saveIteration=100, displayIteration=5, batchSize=4):
         #  Total training iteration
@@ -169,7 +169,7 @@ class ClassificationModel(DNNModel):
                 trainingNGCIs, estimatedGCICount = sess.run(
                     [merged, self.update, self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost,
                      self.nGCIs, self.estimatedGCICount],
-                    feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
+                    feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
                              + ", \tbatch loss= {:.9f}".format(trainingCost)
@@ -197,7 +197,7 @@ class ClassificationModel(DNNModel):
                     trainingNGCIs, estimatedGCICount, trainingResults = sess.run(
                         [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost,
                          self.nGCIs, self.estimatedGCICount, self.results],
-                        feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
+                        feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                    self.gciCount: batchGCICount, self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
@@ -231,7 +231,7 @@ class ClassificationModel(DNNModel):
                     for i in range(validationIteration):
                         (batchX, batchY, batchMask, batchGCICount) = validationDataSet.getBatch(i)
                         validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationResults, validationNGCIs, estimatedGCICount = \
-                            sess.run([self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs, self.estimatedGCICount], feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
+                            sess.run([self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs, self.estimatedGCICount], feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                                        self.gciCount: batchGCICount,
                                        self.keep_prob: 1.0})
                         logging.info("Validation epoch:" + str(validationDataSet.completedEpoch)
@@ -306,7 +306,7 @@ class ClassificationModel(DNNModel):
                 (batchX, batchY, batchMask, batchGCICount) = testDataSet.getBatch(i)
                 testResults, testNGCIs, estimatedGCICount, testingCost = sess.run([self.results, self.nGCIs, self.estimatedGCICount, self.cost],
                                                                    feed_dict={self.x: batchX, self.y: batchY,
-                                                                              self.maskVector: batchMask,
+                                                                              self.maskMatrix: batchMask,
                                                                               self.gciCount: batchGCICount,
                                                                               self.keep_prob: 1.0})
                 logging.info(", \tTesting iteration:" + str(i)
