@@ -43,7 +43,7 @@ class ClassificationModel(DNNModel):
                 self.difference = tf.subtract(self.logits, self.y)
             with tf.name_scope('costDistribute'):
                 # self.costDistribute = tf.matmul(self.maskMatrix, self.difference)
-                self.costDistribute = tf.boolean_mask( self.difference, self.maskVector)
+                self.costDistribute = tf.boolean_mask(self.difference, self.maskVector)
             with tf.name_scope('larynxCycleCost'):
                 self.larynxCycleCost = tf.reduce_sum(tf.square(self.costDistribute))
                 self.variableSummaries(self.larynxCycleCost)
@@ -57,12 +57,12 @@ class ClassificationModel(DNNModel):
                 # costWeights = tf.nn.softmax(tf.Variable(tf.random_normal([2, 1])))
                 # self.cost = tf.reduce_sum(tf.matmul(tf.stack([[self.larynxCycleCost, self.outOfLarynxCycleCost]]), costWeights))
                 # self.cost = self.outOfLarynxCycleCost
-                self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
+                # self.cost = self.larynxCycleCost + 1e3 * self.outOfLarynxCycleCost
+                self.cost = tf.reduce_sum(tf.stack([self.larynxCycleCost, self.outOfLarynxCycleCost]) * tf.nn.softmax(self.loss_weights))
                 self.variableSummaries(self.cost)
                 pass
             pass
         pass
-
 
     # def lossFunction(self):
     #     with tf.name_scope('LossFunction'):
@@ -171,8 +171,8 @@ class ClassificationModel(DNNModel):
                      self.nGCIs, self.estimatedGCICount],
                     feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
                                self.gciCount: batchGCICount, self.keep_prob: 1.0})
-                    # feed_dict = {self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
-                    #              self.gciCount: batchGCICount, self.keep_prob: 1.0})
+                # feed_dict = {self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
+                #              self.gciCount: batchGCICount, self.keep_prob: 1.0})
                 logging.info("Iteration:" + str(i)
                              + ", \tbatch loss= {:.9f}".format(trainingCost)
                              + ", \tlarynx loss= {:.9f}".format(trainingLarynxCycleCost)
@@ -201,8 +201,8 @@ class ClassificationModel(DNNModel):
                          self.nGCIs, self.estimatedGCICount, self.results],
                         feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
                                    self.gciCount: batchGCICount, self.keep_prob: 1.0})
-                        # feed_dict = {self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
-                        #              self.gciCount: batchGCICount, self.keep_prob: 1.0})
+                    # feed_dict = {self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
+                    #              self.gciCount: batchGCICount, self.keep_prob: 1.0})
                     logging.info("Epoch:" + str(trainingDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tbatch loss= {:.9f}".format(trainCost)
@@ -222,10 +222,10 @@ class ClassificationModel(DNNModel):
                     labelSeq = trainingResults[0]
                     locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
                     logging.info("trainingResults:" + str(locations))
-                    del(batchX)
-                    del(batchY)
-                    del(batchMask)
-                    del(batchGCICount)
+                    del (batchX)
+                    del (batchY)
+                    del (batchMask)
+                    del (batchGCICount)
                     pass
                 # Validate
                 if (trainingDataSet.completedEpoch > self.epoch):
@@ -239,9 +239,12 @@ class ClassificationModel(DNNModel):
                     for i in range(validationIteration):
                         (batchX, batchY, batchMask, batchGCICount) = validationDataSet.getBatch(i)
                         validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationResults, validationNGCIs, estimatedGCICount = \
-                            sess.run([self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs, self.estimatedGCICount], feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
-                                       self.gciCount: batchGCICount,
-                                       self.keep_prob: 1.0})
+                            sess.run(
+                                [self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs,
+                                 self.estimatedGCICount],
+                                feed_dict={self.x: batchX, self.y: batchY, self.maskVector: batchMask,
+                                           self.gciCount: batchGCICount,
+                                           self.keep_prob: 1.0})
                         # validationCost, validationLarynxCycleCost, validationOutOfLarynxCycleCost, validationResults, validationNGCIs, estimatedGCICount = \
                         #     sess.run([self.cost, self.larynxCycleCost, self.outOfLarynxCycleCost, self.results, self.nGCIs, self.estimatedGCICount], feed_dict={self.x: batchX, self.y: batchY, self.maskMatrix: batchMask,
                         #                self.gciCount: batchGCICount,
@@ -263,12 +266,13 @@ class ClassificationModel(DNNModel):
                         targets = trans2DLabelSeq2Locations(y, self.samplingRate, self.frameSize, self.frameStride)
                         logging.info("validationTargets:" + str(targets))
                         labelSeq = validationResults[0]
-                        locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize, self.frameStride)
+                        locations = trans1DLabelSeq2Locations(labelSeq, self.samplingRate, self.frameSize,
+                                                              self.frameStride)
                         logging.info("validationResults:" + str(locations))
                         validationCostSum += validationCost
-                    #     validationMissRateSum += validationMissRate
-                    #     validationCorrectRateSum += validationCorrectRate
-                    #     validationFalseAlarmedRateSum += validationFalseAlarmedRate
+                        #     validationMissRateSum += validationMissRate
+                        #     validationCorrectRateSum += validationCorrectRate
+                        #     validationFalseAlarmedRateSum += validationFalseAlarmedRate
                         del (batchX)
                         del (batchY)
                         del (batchMask)
@@ -278,12 +282,12 @@ class ClassificationModel(DNNModel):
                     logging.info("Epoch:" + str(validationDataSet.completedEpoch)
                                  + ", \titeration:" + str(i)
                                  + ", \tmean loss= {:.9f}".format(validationCostSum / validationIteration)
-                    #              + ", \tmean validation correct rate= {:.9f}".format(
-                    #     validationCorrectRateSum / validationIteration)
-                    #              + ", \tmean validation miss rate= {:.9f}".format(
-                    #     validationMissRateSum / validationIteration)
-                    #              + ", \tmean validation false alarmed rate= {:.9f}".format(
-                    #     validationFalseAlarmedRateSum / validationIteration)
+                                 #              + ", \tmean validation correct rate= {:.9f}".format(
+                                 #     validationCorrectRateSum / validationIteration)
+                                 #              + ", \tmean validation miss rate= {:.9f}".format(
+                                 #     validationMissRateSum / validationIteration)
+                                 #              + ", \tmean validation false alarmed rate= {:.9f}".format(
+                                 #     validationFalseAlarmedRateSum / validationIteration)
                                  )
                     # Update epoch.
                     self.epoch = trainingDataSet.completedEpoch
@@ -320,12 +324,13 @@ class ClassificationModel(DNNModel):
             '''Forward testing data.'''
             for i in range(testIteration):
                 (batchX, batchY, batchMask, batchGCICount) = testDataSet.getBatch(i)
-                testResults, testNGCIs, estimatedGCICount, testingCost = sess.run([self.results, self.nGCIs, self.estimatedGCICount, self.cost],
-                                                                   feed_dict={self.x: batchX, self.y: batchY,
-                                                                              self.maskVector: batchMask,
-                                                                              self.gciCount: batchGCICount,
-                                                                              self.keep_prob: 1.0}
-                                                                                  )
+                testResults, testNGCIs, estimatedGCICount, testingCost = sess.run(
+                    [self.results, self.nGCIs, self.estimatedGCICount, self.cost],
+                    feed_dict={self.x: batchX, self.y: batchY,
+                               self.maskVector: batchMask,
+                               self.gciCount: batchGCICount,
+                               self.keep_prob: 1.0}
+                    )
                 # testResults, testNGCIs, estimatedGCICount, testingCost = sess.run([self.results, self.nGCIs, self.estimatedGCICount, self.cost],
                 #                                                    feed_dict={self.x: batchX, self.y: batchY,
                 #                                                               self.maskMatrix: batchMask,

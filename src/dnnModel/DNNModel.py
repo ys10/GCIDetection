@@ -54,6 +54,7 @@ class DNNModel(object):
         '''DNN model'''
         self.DNNModel()
         '''Loss function'''
+        self.loss_weights = tf.reshape(tf.Variable([0.3, 0.7]), shape=(2, 1))
         self.lossFunction()
         '''Optimizer'''
         with tf.name_scope('Optimizer'):
